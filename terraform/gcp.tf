@@ -114,7 +114,7 @@ data "google_container_engine_versions" "versions" {
 resource "google_container_cluster" "vault" {
   name    = "vault"
   project = "${google_project.vault.project_id}"
-  zone    = "${var.zone}"
+  region  = "${var.region}"
 
   initial_node_count = "${var.num_vault_servers}"
 
@@ -162,8 +162,4 @@ output "project" {
 
 output "region" {
   value = "${var.region}"
-}
-
-output "zone" {
-  value = "${var.zone}"
 }
