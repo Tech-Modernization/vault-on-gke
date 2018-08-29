@@ -1,16 +1,6 @@
 variable "region" {
   type    = "string"
-  default = "us-east4"
-}
-
-variable "zone" {
-  type    = "string"
-  default = "us-east4-b"
-}
-
-variable "project" {
-  type    = "string"
-  default = ""
+  default = "asia-southeast1"
 }
 
 variable "billing_account" {

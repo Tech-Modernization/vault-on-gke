@@ -99,7 +99,7 @@ resource "google_kms_crypto_key_iam_member" "vault-init" {
 resource "google_container_cluster" "vault" {
   name    = "vault"
   project = "${google_project.vault.project_id}"
-  zone    = "${var.zone}"
+  region  = "${var.region}"
 
   min_master_version = "${var.kubernetes_version}"
   node_version       = "${var.kubernetes_version}"
@@ -145,8 +145,4 @@ output "project" {
 
 output "region" {
   value = "${var.region}"
-}
-
-output "zone" {
-  value = "${var.zone}"
 }
