@@ -79,6 +79,16 @@ EOF
   depends_on = ["null_resource.apply"]
 }
 
+# Enable TLS backend for vault
+resource "null_resource" "vault-auth-enable" {
+  provisioner "local-exec" {
+    command = <<EOF
+      docker run --rm -e VAULT_ADDR="https://${google_compute_address.vault.address}:8200" -e VAULT_CAPATH="/ca.pem" -e VAULT_TOKEN="${data.google_kms_secret.root-token.plaintext}" -v "$(pwd)/../tls/ca.pem:/ca.pem" vault vault auth enable cert
+      docker run --rm -e VAULT_ADDR="https://${google_compute_address.vault.address}:8200" -e VAULT_CAPATH="/ca.pem" -e VAULT_TOKEN="${data.google_kms_secret.root-token.plaintext}" -v "$(pwd)/../tls/ca.pem:/ca.pem" -v "$(pwd)/../tls/vault.pem:/vault.pem" vault: vault write auth/cert/certs/web display_name=web policies=tls-policy certificate=@/vault.pem ttl=3600
+EOF
+  }
+}
+
 # Download the encrypted root token to disk
 data "google_storage_object_signed_url" "root-token" {
   bucket = "${google_storage_bucket.vault.name}"
