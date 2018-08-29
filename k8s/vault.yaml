@@ -114,7 +114,7 @@ spec:
               tls_cert_file = "/etc/vault/tls/vault.crt"
               tls_key_file  = "/etc/vault/tls/vault.key"
 
-              tls_disable_client_certs = true
+              tls_disable_client_certs = false
             }
         readinessProbe:
           httpGet:
