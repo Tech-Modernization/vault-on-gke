@@ -95,11 +95,79 @@ resource "google_kms_crypto_key_iam_member" "vault-init" {
   member        = "serviceAccount:${google_service_account.vault-server.email}"
 }
 
+resource "google_compute_network" "shared_vpc" {
+  name                    = "${random_id.random.hex}-vpc"
+  auto_create_subnetworks = "false"
+  routing_mode            = "GLOBAL"
+  project                 = "${google_project.vault.project_id}"
+
+  depends_on = ["google_project_service.service"]
+}
+
+resource "google_compute_subnetwork" "service_subnet" {
+  name          = "${random_id.random.hex}-subnet"
+  project       = "${google_project.vault.project_id}"
+  ip_cidr_range = "10.100.0.0/24"
+  network       = "${google_compute_network.shared_vpc.self_link}"
+
+  # access PaaS without external IP
+  private_ip_google_access = true
+
+  secondary_ip_range {
+    range_name    = "cluster-range"
+    ip_cidr_range = "10.100.16.0/20"
+  }
+
+  secondary_ip_range {
+    range_name    = "services-range"
+    ip_cidr_range = "10.100.4.0/22"
+  }
+}
+
+# Allow inbound traffic on 8200
+resource "google_compute_firewall" "vault-inbound" {
+  name    = "${google_project.vault.project_id}-vault-inbound"
+  project = "${google_project.vault.project_id}"
+  network = "${google_compute_network.shared_vpc.self_link}"
+
+  direction = "INGRESS"
+  allow {
+    protocol = "tcp"
+    ports    = ["8200"]
+  }
+
+  source_ranges = [
+    "0.0.0.0/0"
+  ]
+}
+
 # Create the GKE cluster
 resource "google_container_cluster" "vault" {
   name    = "vault"
   project = "${google_project.vault.project_id}"
   region  = "${var.region}"
+
+  # Deploy into VPC
+  network    = "${google_compute_subnetwork.service_subnet.network}"
+  subnetwork = "${google_compute_subnetwork.service_subnet.self_link}"
+
+  # Private GKE
+  private_cluster        = true
+  master_ipv4_cidr_block = "172.16.0.32/28"
+  ip_allocation_policy   = {
+    cluster_secondary_range_name = "cluster-range"
+    services_secondary_range_name = "services-range"
+  }
+
+  # Hosts authorized to connect to the cluster master
+  master_authorized_networks_config = {
+    cidr_blocks = {
+      # Route from Matt home
+      cidr_block = "110.174.101.135/32"
+      # Route from 4G
+      cidr_block = "49.199.245.149/32"
+    }
+  }
 
   min_master_version = "${var.kubernetes_version}"
   node_version       = "${var.kubernetes_version}"
@@ -126,7 +194,7 @@ resource "google_container_cluster" "vault" {
   depends_on = ["google_project_service.service"]
 }
 
-# Provision IP
+# Provision Global Static IP
 resource "google_compute_address" "vault" {
   name    = "vault-lb"
   region  = "${var.region}"
