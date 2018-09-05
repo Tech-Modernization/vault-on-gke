@@ -60,7 +60,7 @@ variable "kms_crypto_key_roles" {
 
 variable "kubernetes_version" {
   type    = "string"
-  default = "1.10.5-gke.4"
+  default = "1.10.6-gke.2"
 }
 
 variable "kubernetes_logging_service" {
