@@ -1,3 +1,21 @@
+# Pull the two docker containers and push to gcr.io
+resource "null_resource" "gcr-images" {
+  triggers {
+    project_id = "${google_project.vault.project_id}"
+  }
+
+  provisioner "local-exec" {
+    command = <<EOF
+docker pull "vault:0.11.0"
+docker tag "vault:0.11.0" "gcr.io/${google_project.vault.project_id}/vault:0.11.0"
+docker push "gcr.io/${google_project.vault.project_id}/vault:0.11.0"
+docker pull "sethvargo/vault-init:0.1.1"
+docker tag "sethvargo/vault-init:0.1.1" "gcr.io/${google_project.vault.project_id}/vault-init:0.1.1"
+docker push "gcr.io/${google_project.vault.project_id}/vault-init:0.1.1"
+EOF
+  }
+}
+
 # Write the secret
 resource "kubernetes_secret" "vault-tls" {
   metadata {
@@ -71,7 +89,7 @@ exit 1
 EOF
   }
 
-  depends_on = ["null_resource.apply"]
+  depends_on = ["null_resource.apply", "null_resource.gcr-images"]
 }
 
 # Enable TLS backend for vault

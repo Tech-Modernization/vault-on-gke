@@ -46,7 +46,7 @@ spec:
       terminationGracePeriodSeconds: 10
       containers:
       - name: vault-init
-        image: registry.hub.docker.com/sethvargo/vault-init:0.1.1
+        image: gcr.io/${project_id}/vault-init:0.1.1
         imagePullPolicy: Always
         env:
         - name: CHECK_INTERVAL
@@ -62,7 +62,7 @@ spec:
               name: vault
               key: kms_key_id
       - name: vault
-        image: registry.hub.docker.com/library/vault:0.11.0
+        image: gcr.io/${project_id}/vault:0.11.0
         imagePullPolicy: Always
         args: ['server']
         securityContext:
