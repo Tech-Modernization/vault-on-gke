@@ -96,10 +96,20 @@ EOF
 resource "null_resource" "vault-auth-enable" {
   provisioner "local-exec" {
     command = <<EOF
-      docker run --rm -e VAULT_ADDR="https://${google_compute_address.vault.address}:8200" -e VAULT_CAPATH="/ca.pem" -e VAULT_TOKEN="${data.google_kms_secret.root-token.plaintext}" -v "$(pwd)/../tls/ca.pem:/ca.pem" vault vault auth enable cert
-      docker run --rm -e VAULT_ADDR="https://${google_compute_address.vault.address}:8200" -e VAULT_CAPATH="/ca.pem" -e VAULT_TOKEN="${data.google_kms_secret.root-token.plaintext}" -v "$(pwd)/../tls/ca.pem:/ca.pem" -v "$(pwd)/../tls/vault.pem:/vault.pem" vault: vault write auth/cert/certs/web display_name=web policies=tls-policy certificate=@/vault.pem ttl=3600
+      # enable TLS cert auth
+      curl --cacert ../tls/ca.pem \
+          --header "X-Vault-Token: ${data.google_kms_secret.root-token.plaintext}" \
+          --data '{"type": "cert"}' \
+          "https://${google_compute_address.vault.address}:8200/v1/sys/auth/cert"
+      # install "bamboo" certificate
+      curl --cacert ../tls/ca.pem \
+          --header "X-Vault-Token: ${data.google_kms_secret.root-token.plaintext}" \
+          --data '{"display_name": "bamboo", "policies": "tls-policy", "certificate": "${tls_self_signed_cert.vault-ca.cert_pem}"}' \
+          "https://${google_compute_address.vault.address}:8200/v1/auth/cert/certs/bamboo"
 EOF
   }
+
+  depends_on = ["null_resource.wait-for-finish"]
 }
 
 # Download the encrypted root token to disk
