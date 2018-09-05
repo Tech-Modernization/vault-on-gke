@@ -117,6 +117,26 @@ EOF
   depends_on = ["null_resource.wait-for-finish"]
 }
 
+# Enable GCP secrets engine for vault
+resource "null_resource" "vault-secrets-gcp-enable" {
+  provisioner "local-exec" {
+    command = <<EOF
+      # enable GCP secrets engine
+      curl --cacert ../tls/ca.pem \
+          --header "X-Vault-Token: ${data.google_kms_secret.root-token.plaintext}" \
+          --data '{"type": "gcp"}' \
+          "https://${google_compute_address.vault.address}:8200/v1/sys/mounts/gcp"
+      # configure the GCP backend to expire keys in 15m
+      curl --cacert ../tls/ca.pem \
+          --header "X-Vault-Token: ${data.google_kms_secret.root-token.plaintext}" \
+          --data '{"ttl": "15m", "max_ttl": "15m"}' \
+          "https://${google_compute_address.vault.address}:8200/v1/gcp/config"
+EOF
+  }
+
+  depends_on = ["null_resource.wait-for-finish"]
+}
+
 # Download the encrypted root token to disk
 data "google_storage_object_signed_url" "root-token" {
   bucket = "${google_storage_bucket.vault.name}"
