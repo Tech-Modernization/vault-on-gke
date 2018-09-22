@@ -169,12 +169,16 @@ resource "google_container_cluster" "vault" {
 
   # Hosts authorized to connect to the cluster master
   master_authorized_networks_config = {
-    cidr_blocks = {
-      # Route from Matt home
-      cidr_block = "110.174.101.135/32"
-      # Route from 4G
-      cidr_block = "49.199.245.149/32"
-    }
+    cidr_blocks = [
+      {
+        cidr_block = "110.174.101.135/32",
+        display_name = "Matt Home"
+      },
+      {
+        cidr_block = "49.183.51.175/32",
+        display_name = "Telstra 4G"
+      },
+    ]
   }
 
   logging_service    = "${var.kubernetes_logging_service}"
