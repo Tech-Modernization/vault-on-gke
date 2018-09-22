@@ -1,5 +1,3 @@
-# Generate a random id for the project - GCP projects must have globally
-# unique names
 resource "random_id" "random" {
   prefix      = "vault-"
   byte_length = "8"
@@ -122,16 +120,6 @@ resource "google_compute_subnetwork" "service_subnet" {
 
   # access PaaS without external IP
   private_ip_google_access = true
-
-  secondary_ip_range {
-    range_name    = "cluster-range"
-    ip_cidr_range = "10.100.16.0/20"
-  }
-
-  secondary_ip_range {
-    range_name    = "services-range"
-    ip_cidr_range = "10.100.4.0/22"
-  }
 }
 
 # Allow inbound traffic on 8200
@@ -175,8 +163,8 @@ resource "google_container_cluster" "vault" {
   private_cluster        = true
   master_ipv4_cidr_block = "172.16.0.32/28"
   ip_allocation_policy   = {
-    cluster_secondary_range_name = "cluster-range"
-    services_secondary_range_name = "services-range"
+    cluster_ipv4_cidr_block = "/20"
+    services_ipv4_cidr_block = "/22"
   }
 
   # Hosts authorized to connect to the cluster master
