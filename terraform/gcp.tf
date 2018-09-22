@@ -151,8 +151,6 @@ resource "google_container_cluster" "vault" {
   project = "${google_project.vault.project_id}"
   zone    = "${var.zone}"
 
-  initial_node_count = "${var.num_vault_servers}"
-
   min_master_version = "${data.google_container_engine_versions.versions.latest_master_version}"
   node_version       = "${data.google_container_engine_versions.versions.latest_node_version}"
 
@@ -189,9 +187,44 @@ resource "google_container_cluster" "vault" {
   logging_service    = "${var.kubernetes_logging_service}"
   monitoring_service = "${var.kubernetes_monitoring_service}"
 
+  # Declare node pools independently of clusters
+  remove_default_node_pool = true
+
+  node_pool = {
+    name = "default-pool"
+  }
+
+  # Ensure cluster is not recreated when pool configuration changes
+  lifecycle = {
+    ignore_changes = ["node_pool"]
+  }
+
+  depends_on = ["google_project_service.service"]
+}
+
+resource "google_container_node_pool" "vault" {
+  name    = "default-pool"
+  cluster = "${google_container_cluster.vault.name}"
+  project = "${google_project.vault.project_id}"
+  zone    = "${var.zone}"
+
+  initial_node_count = "${var.num_vault_servers}"
+
+  max_pods_per_node = "110" # Kubernetes default
+
+  management {
+    auto_repair  = true
+    auto_upgrade = true
+  }
+
   node_config {
+    image_type      = "COS"
     machine_type    = "${var.instance_type}"
     service_account = "${google_service_account.vault-server.email}"
+
+    workload_metadata_config {
+      node_metadata = "SECURE"
+    }
 
     oauth_scopes = [
       "https://www.googleapis.com/auth/cloud-platform",
