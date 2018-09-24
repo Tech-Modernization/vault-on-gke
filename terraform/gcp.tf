@@ -148,7 +148,8 @@ data "google_container_engine_versions" "versions" {
 resource "google_container_cluster" "vault" {
   name    = "vault"
   project = "${google_project.vault.project_id}"
-  region  = "${var.region}"
+  #region  = "${var.region}"
+  zone    = "australia-southeast1-a"
 
   initial_node_count = "${var.num_vault_servers}"
 
