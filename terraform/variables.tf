@@ -63,3 +63,8 @@ variable "num_vault_servers" {
   type    = "string"
   default = "3"
 }
+
+variable "consul_license_path" {
+  description = "Path to Consul's license file"
+  type        = "string"
+}

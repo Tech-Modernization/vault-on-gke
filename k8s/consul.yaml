@@ -96,9 +96,14 @@ spec:
       securityContext:
         fsGroup: 1000
 
+      volumes:
+      - name: consul-license
+        secret:
+          secretName: consul-license
+
       containers:
       - name: consul-server
-        image: gcr.io/${project_id}/consul:1.2.3
+        image: gcr.io/${project_id}/consul-enterprise:1.2.3
         imagePullPolicy: Always
         command:
         - /bin/sh
@@ -121,6 +126,8 @@ spec:
         volumeMounts:
         - name: consul-vol
           mountPath: /consul/data
+        - name: consul-license
+          mountPath: /consul/license
         lifecycle:
           preStop:
             exec:
@@ -201,7 +208,7 @@ spec:
 
       containers:
       - name: consul
-        image: gcr.io/${project_id}/consul:1.2.3
+        image: gcr.io/${project_id}/consul-enterprise:1.2.3
         env:
         - name: POD_IP_ADDR
           valueFrom:
