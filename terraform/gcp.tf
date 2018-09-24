@@ -121,7 +121,11 @@ resource "google_container_cluster" "vault" {
       },
       {
         cidr_block = "49.183.51.175/32",
-        display_name = "Telstra 4G"
+        display_name = "OPT_A29F_5GHz"
+      },
+      {
+        cidr_block = "1.136.108.64/32",
+        display_name = "T4GXP_MFG7 4G"
       },
     ]
   }
