@@ -1,6 +1,6 @@
 variable "region" {
   type    = "string"
-  default = "asia-southeast1"
+  default = "australia-southeast1"
 }
 
 variable "billing_account" {
