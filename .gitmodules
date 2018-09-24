@@ -1,0 +1,6 @@
+[submodule "docker-vault"]
+	path = docker-vault
+	url = git@github.com:contino/docker-vault.git
+[submodule "docker-consul"]
+	path = docker-consul
+	url = git@github.com:contino/docker-consul.git
