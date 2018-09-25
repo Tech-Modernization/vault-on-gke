@@ -1,5 +1,17 @@
-# Pull Consul image and push to gcr.io
-resource "null_resource" "gcr-consul" {
+# Build Consul enterprise docker image
+resource "null_resource" "build-consul-image" {
+  provisioner "local-exec" {
+    command = <<EOF
+cd ../docker-consul/0.X && \
+    docker build \
+        --build-arg CONSUL_VERSION=1.2.3 \
+        -t consul-enterprise:1.2.3 .
+EOF
+  }
+}
+
+# Push to Consul image to project gcr.io
+resource "null_resource" "push-consul-image-to-gcr" {
   triggers {
     project_id = "${google_project.vault.project_id}"
   }
@@ -10,6 +22,10 @@ docker tag "consul-enterprise:1.2.3" "gcr.io/${google_project.vault.project_id}/
 docker push "gcr.io/${google_project.vault.project_id}/consul-enterprise:1.2.3"
 EOF
   }
+
+  depends_on = [
+    "null_resource.build-consul-image",
+  ]
 }
 
 # Write Consul license to kubernetes secrets
@@ -55,8 +71,8 @@ EOF
   # Consul image must be in GCR
   depends_on = [
     "google_container_node_pool.vault",
-    "null_resource.gcr-consul",
     "kubernetes_secret.consul-license",
+    "null_resource.push-consul-image-to-gcr",
   ]
 }
 
