@@ -62,7 +62,7 @@ metadata:
 
 spec:
   serviceName: consul-cluster
-  replicas: 3
+  replicas: 5
   podManagementPolicy: Parallel
   selector:
     matchLabels:
@@ -112,7 +112,7 @@ spec:
           exec /bin/consul agent \
             -advertise=$(POD_IP_ADDR) \
             -bind=0.0.0.0 \
-            -bootstrap-expect=3 \
+            -bootstrap-expect=5 \
             -client=0.0.0.0 \
             -config-dir=/consul/config \
             -datacenter=gcp1 \
@@ -122,6 +122,8 @@ spec:
             -retry-join=consul-cluster-0.consul-cluster.$(NAMESPACE).svc.cluster.local \
             -retry-join=consul-cluster-1.consul-cluster.$(NAMESPACE).svc.cluster.local \
             -retry-join=consul-cluster-2.consul-cluster.$(NAMESPACE).svc.cluster.local \
+            -retry-join=consul-cluster-3.consul-cluster.$(NAMESPACE).svc.cluster.local \
+            -retry-join=consul-cluster-4.consul-cluster.$(NAMESPACE).svc.cluster.local \
             -server
         volumeMounts:
         - name: consul-vol
