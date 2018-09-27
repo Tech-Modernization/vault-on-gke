@@ -169,8 +169,7 @@ spec:
             command:
             - /bin/sh
             - -ec
-            - |
-              curl http://127.0.0.1:8500/v1/status/leader 2>/dev/null
+            - curl http://127.0.0.1:8500/v1/status/leader 2>/dev/null | grep -E '".+"'
           failureThreshold: 2
           initialDelaySeconds: 5
           periodSeconds: 3
@@ -268,5 +267,4 @@ spec:
             command:
             - /bin/sh
             - -ec
-            - |
-              curl http://127.0.0.1:8500/v1/status/leader 2>/dev/null
+            - curl http://127.0.0.1:8500/v1/status/leader 2>/dev/null | grep -E '".+"'
