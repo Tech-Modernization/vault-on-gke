@@ -82,7 +82,7 @@ resource "null_resource" "wait-for-consul-ready" {
     command = <<EOF
 for i in {1..15}; do
   sleep $i
-  if [ $(kubectl get pod | grep -E "consul-cluster.*1/1.*Running" | wc -l) -eq 3 ]; then
+  if [ $(kubectl get pod | grep -E "consul-cluster.*1/1.*Running" | wc -l) -eq 5 ]; then
     exit 0
   fi
 done
