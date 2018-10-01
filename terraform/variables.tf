@@ -36,6 +36,7 @@ variable "project_services" {
     "cloudresourcemanager.googleapis.com",
     "container.googleapis.com",
     "iam.googleapis.com",
+    "logging.googleapis.com",
   ]
 }
 
