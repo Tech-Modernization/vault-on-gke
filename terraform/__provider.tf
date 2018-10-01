@@ -4,6 +4,10 @@ provider "google" {
 }
 
 provider "kubernetes" {
+  # We don't want to load ~/.kube/config by default, will be getting the credentials later
+  # https://www.terraform.io/docs/providers/kubernetes/index.html#load_config_file
+  load_config_file = false
+
   host     = "${google_container_cluster.vault.endpoint}"
   username = "${google_container_cluster.vault.master_auth.0.username}"
   password = "${google_container_cluster.vault.master_auth.0.password}"
