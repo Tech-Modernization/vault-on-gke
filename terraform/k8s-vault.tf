@@ -71,6 +71,7 @@ data "template_file" "vault" {
     load_balancer_ip  = "${google_compute_address.vault.address}"
     num_vault_servers = "${var.num_vault_servers}"
     project_id        = "${google_project.vault.project_id}"
+    region            = "${var.region}"
   }
 }
 
