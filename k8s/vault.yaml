@@ -107,6 +107,13 @@ spec:
               path = "vault/"
             }
 
+            seal "gcpckms" {
+              project    = "${project_id}"
+              region     = "${region}"
+              key_ring   = "vault-keyring"
+              crypto_key = "vault-seal"
+            }
+
             listener "tcp" {
               address       = "0.0.0.0:8200"
               tls_cert_file = "/etc/vault/tls/vault.crt"
