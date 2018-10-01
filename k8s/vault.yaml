@@ -124,7 +124,7 @@ spec:
 
         readinessProbe:
           httpGet:
-            path: /v1/sys/health?standbyok=true
+            path: /v1/sys/health?standbyok=true&performancestandbycode=200
             port: 8200
             scheme: HTTPS
           initialDelaySeconds: 5
