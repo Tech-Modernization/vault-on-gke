@@ -69,3 +69,8 @@ variable "consul_license_path" {
   description = "Path to Consul's license file"
   type        = "string"
 }
+
+variable "vault_license_path" {
+  description = "Path to Vault's license file"
+  type        = "string"
+}

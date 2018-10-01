@@ -41,6 +41,17 @@ resource "kubernetes_secret" "vault-tls" {
   }
 }
 
+# Write the Vault license key to kubernetes secrets
+resource "kubernetes_secret" "vault-data" {
+  metadata {
+    name = "vault-data"
+  }
+
+  data {
+    "vault.license" = "${file(var.vault_license_path)}"
+  }
+}
+
 # Write kubernetes configmap. These values are used in the Vault config file
 resource "kubernetes_config_map" "vault" {
   metadata {
