@@ -1,23 +1,13 @@
 variable "region" {
   type    = "string"
-  default = "us-east4"
-}
-
-variable "zone" {
-  type    = "string"
-  default = "us-east4-b"
-}
-
-variable "project" {
-  type    = "string"
-  default = ""
+  default = "australia-southeast1"
 }
 
 variable "billing_account" {
   type = "string"
 }
 
-variable "org_id" {
+variable "org" {
   type = "string"
 }
 
@@ -47,23 +37,7 @@ variable "project_services" {
     "cloudresourcemanager.googleapis.com",
     "container.googleapis.com",
     "iam.googleapis.com",
-  ]
-}
-
-variable "storage_bucket_roles" {
-  type = "list"
-
-  default = [
-    "roles/storage.legacyBucketReader",
-    "roles/storage.objectAdmin",
-  ]
-}
-
-variable "kms_crypto_key_roles" {
-  type = "list"
-
-  default = [
-    "roles/cloudkms.cryptoKeyEncrypterDecrypter",
+    "logging.googleapis.com",
   ]
 }
 
@@ -80,4 +54,14 @@ variable "kubernetes_monitoring_service" {
 variable "num_vault_servers" {
   type    = "string"
   default = "3"
+}
+
+variable "consul_license_path" {
+  description = "Path to Consul's license file"
+  type        = "string"
+}
+
+variable "vault_license_path" {
+  description = "Path to Vault's license file"
+  type        = "string"
 }

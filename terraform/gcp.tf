@@ -1,22 +1,17 @@
-# This file contains all the interactions with Google Cloud
-provider "google" {
-  region  = "${var.region}"
-  zone    = "${var.zone}"
-  project = "${var.project}"
-}
-
-# Generate a random id for the project - GCP projects must have globally
-# unique names
 resource "random_id" "random" {
   prefix      = "vault-"
   byte_length = "8"
+}
+
+data "google_organization" "org" {
+  domain = "${var.org}"
 }
 
 # Create the project
 resource "google_project" "vault" {
   name            = "${random_id.random.hex}"
   project_id      = "${random_id.random.hex}"
-  org_id          = "${var.org_id}"
+  org_id          = "${data.google_organization.org.id}"
   billing_account = "${var.billing_account}"
 }
 
@@ -52,60 +47,63 @@ resource "google_project_service" "service" {
   disable_on_destroy = false
 }
 
-# Create the storage bucket
-resource "google_storage_bucket" "vault" {
-  name          = "${google_project.vault.project_id}-vault-storage"
-  project       = "${google_project.vault.project_id}"
-  force_destroy = true
-  storage_class = "MULTI_REGIONAL"
-
-  versioning {
-    enabled = true
-  }
-
-  lifecycle_rule {
-    action {
-      type = "Delete"
-    }
-
-    condition {
-      num_newer_versions = 3
-    }
-  }
-
-  depends_on = ["google_project_service.service"]
-}
-
-# Grant service account access to the storage bucket
-resource "google_storage_bucket_iam_member" "vault-server" {
-  count  = "${length(var.storage_bucket_roles)}"
-  bucket = "${google_storage_bucket.vault.name}"
-  role   = "${element(var.storage_bucket_roles, count.index)}"
-  member = "serviceAccount:${google_service_account.vault-server.email}"
-}
-
 # Create the KMS key ring
-resource "google_kms_key_ring" "vault" {
-  name     = "vault"
+resource "google_kms_key_ring" "vault-seal" {
+  name     = "vault-keyring"
   location = "${var.region}"
   project  = "${google_project.vault.project_id}"
 
   depends_on = ["google_project_service.service"]
 }
 
-# Create the crypto key for encrypting init keys
-resource "google_kms_crypto_key" "vault-init" {
-  name            = "vault-init"
-  key_ring        = "${google_kms_key_ring.vault.id}"
+# Create the crypto key for encrypting auto-unseal keys
+resource "google_kms_crypto_key" "vault-seal" {
+  name            = "vault-seal"
+  key_ring        = "${google_kms_key_ring.vault-seal.id}"
   rotation_period = "604800s"
 }
 
 # Grant service account access to the key
-resource "google_kms_crypto_key_iam_member" "vault-init" {
-  count         = "${length(var.kms_crypto_key_roles)}"
-  crypto_key_id = "${google_kms_crypto_key.vault-init.id}"
-  role          = "${element(var.kms_crypto_key_roles, count.index)}"
+resource "google_kms_crypto_key_iam_member" "vault-seal" {
+  crypto_key_id = "${google_kms_crypto_key.vault-seal.id}"
+  role          = "roles/cloudkms.cryptoKeyEncrypterDecrypter"
   member        = "serviceAccount:${google_service_account.vault-server.email}"
+}
+
+resource "google_compute_network" "shared_vpc" {
+  name                    = "${random_id.random.hex}-vpc"
+  auto_create_subnetworks = "false"
+  routing_mode            = "GLOBAL"
+  project                 = "${google_project.vault.project_id}"
+
+  depends_on = ["google_project_service.service"]
+}
+
+resource "google_compute_subnetwork" "service_subnet" {
+  name          = "${random_id.random.hex}-subnet"
+  project       = "${google_project.vault.project_id}"
+  ip_cidr_range = "10.100.0.0/24"
+  network       = "${google_compute_network.shared_vpc.self_link}"
+
+  # access PaaS without external IP
+  private_ip_google_access = true
+}
+
+# Allow inbound traffic on 8200
+resource "google_compute_firewall" "vault-inbound" {
+  name    = "${google_project.vault.project_id}-vault-inbound"
+  project = "${google_project.vault.project_id}"
+  network = "${google_compute_network.shared_vpc.self_link}"
+
+  direction = "INGRESS"
+  allow {
+    protocol = "tcp"
+    ports    = ["8200"]
+  }
+
+  source_ranges = [
+    "0.0.0.0/0"
+  ]
 }
 
 # Get latest cluster version
@@ -117,22 +115,88 @@ data "google_container_engine_versions" "versions" {
 resource "google_container_cluster" "vault" {
   name    = "vault"
   project = "${google_project.vault.project_id}"
-  zone    = "${var.zone}"
+  #region  = "${var.region}"
+  zone    = "australia-southeast1-a"
 
   initial_node_count = "${var.num_vault_servers}"
 
   min_master_version = "${data.google_container_engine_versions.versions.latest_master_version}"
   node_version       = "${data.google_container_engine_versions.versions.latest_node_version}"
 
+  # Deploy into VPC
+  network    = "${google_compute_subnetwork.service_subnet.network}"
+  subnetwork = "${google_compute_subnetwork.service_subnet.self_link}"
+
+  # Private GKE
+  private_cluster        = true
+  master_ipv4_cidr_block = "172.16.0.32/28"
+  ip_allocation_policy   = {
+    cluster_ipv4_cidr_block = "/20"
+    services_ipv4_cidr_block = "/22"
+  }
+
+  # Hosts authorized to connect to the cluster master
+  master_authorized_networks_config = {
+    cidr_blocks = [
+      {
+        cidr_block = "110.174.101.135/32",
+        display_name = "Matt Home"
+      },
+      {
+        cidr_block = "49.183.51.175/32",
+        display_name = "OPT_A29F_5GHz"
+      },
+      {
+        cidr_block = "1.136.108.64/32",
+        display_name = "T4GXP_MFG7 4G"
+      },
+    ]
+  }
+
   logging_service    = "${var.kubernetes_logging_service}"
   monitoring_service = "${var.kubernetes_monitoring_service}"
 
+  # Declare node pools independently of clusters
+  remove_default_node_pool = true
+
+  node_pool = {
+    name = "default-pool"
+  }
+
+  # Ensure cluster is not recreated when pool configuration changes
+  lifecycle = {
+    ignore_changes = ["node_pool"]
+  }
+}
+
+resource "google_container_node_pool" "vault" {
+  name    = "default-pool"
+  cluster = "${google_container_cluster.vault.name}"
+  project = "${google_project.vault.project_id}"
+  #region  = "${var.region}"
+  zone    = "australia-southeast1-a"
+
+  initial_node_count = "${var.num_vault_servers}"
+
+  max_pods_per_node = "110" # Kubernetes default
+
+  management {
+    auto_repair  = true
+    auto_upgrade = true
+  }
+
   node_config {
+    image_type      = "COS"
     machine_type    = "${var.instance_type}"
     service_account = "${google_service_account.vault-server.email}"
 
+    workload_metadata_config {
+      node_metadata = "SECURE"
+    }
+
     oauth_scopes = [
       "https://www.googleapis.com/auth/cloud-platform",
+      "https://www.googleapis.com/auth/iam",
     ]
 
     tags = ["vault"]
@@ -146,7 +210,7 @@ resource "google_container_cluster" "vault" {
   ]
 }
 
-# Provision IP
+# Provision an external static IP for Vault
 resource "google_compute_address" "vault" {
   name    = "vault-lb"
   region  = "${var.region}"
@@ -165,8 +229,4 @@ output "project" {
 
 output "region" {
   value = "${var.region}"
-}
-
-output "zone" {
-  value = "${var.zone}"
 }

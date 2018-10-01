@@ -1,0 +1,270 @@
+# Headless service for Consul server DNS entries.
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: consul-cluster
+  labels:
+    app: consul-server
+  annotations:
+    # This must be set in addition to publishNotReadyAddresses due
+    # to an open issue where it may not work:
+    # https://github.com/kubernetes/kubernetes/issues/58662
+    service.alpha.kubernetes.io/tolerate-unready-endpoints: "true"
+spec:
+  clusterIP: None
+  # We want the servers to become available even if theyre not ready
+  # since this DNS is also used for join operations.
+  publishNotReadyAddresses: true
+  ports:
+  - name: http
+    port: 8500
+    targetPort: 8500
+  - name: serflan-tcp
+    protocol: TCP
+    port: 8301
+    targetPort: 8301
+  - name: serflan-udp
+    protocol: UDP
+    port: 8301
+    targetPort: 8301
+  - name: serfwan-tcp
+    protocol: TCP
+    port: 8302
+    targetPort: 8302
+  - name: serfwan-udp
+    protocol: UDP
+    port: 8302
+    targetPort: 8302
+  - name: server
+    port: 8300
+    targetPort: 8300
+  - name: dns-tcp
+    protocol: TCP
+    port: 8600
+    targetPort: dns-tcp
+  - name: dns-udp
+    protocol: UDP
+    port: 8600
+    targetPort: dns-udp
+  selector:
+    app: consul-server
+
+
+# StatefulSet to run the actual Consul server cluster
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: consul-cluster
+  labels:
+    app: consul-server
+
+spec:
+  serviceName: consul-cluster
+  replicas: 5
+  podManagementPolicy: Parallel
+  selector:
+    matchLabels:
+      app: consul-server
+
+  volumeClaimTemplates:
+  - metadata:
+      name: consul-vol
+    spec:
+      accessModes:
+      - ReadWriteOnce
+      resources:
+        requests:
+          storage: 10Gi
+
+  template:
+    metadata:
+      labels:
+        app: consul-server
+    spec:
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchLabels:
+                  app: consul-server
+              topologyKey: kubernetes.io/hostname
+      terminationGracePeriodSeconds: 10
+      securityContext:
+        fsGroup: 1000
+
+      volumes:
+      - name: consul-license
+        secret:
+          secretName: consul-license
+
+      containers:
+      - name: consul-server
+        image: gcr.io/${project_id}/consul-enterprise:1.2.3
+        imagePullPolicy: Always
+        command:
+        - /bin/sh
+        - -ec
+        - |
+          exec /bin/consul agent \
+            -advertise=$(POD_IP_ADDR) \
+            -bind=0.0.0.0 \
+            -bootstrap-expect=5 \
+            -client=0.0.0.0 \
+            -config-dir=/consul/config \
+            -datacenter=gcp1 \
+            -data-dir=/consul/data \
+            -domain=cluster.local \
+            -ui \
+            -retry-join=consul-cluster-0.consul-cluster.$(NAMESPACE).svc.cluster.local \
+            -retry-join=consul-cluster-1.consul-cluster.$(NAMESPACE).svc.cluster.local \
+            -retry-join=consul-cluster-2.consul-cluster.$(NAMESPACE).svc.cluster.local \
+            -retry-join=consul-cluster-3.consul-cluster.$(NAMESPACE).svc.cluster.local \
+            -retry-join=consul-cluster-4.consul-cluster.$(NAMESPACE).svc.cluster.local \
+            -server
+        volumeMounts:
+        - name: consul-vol
+          mountPath: /consul/data
+        - name: consul-license
+          mountPath: /consul/license
+        lifecycle:
+          preStop:
+            exec:
+              command:
+              - /bin/sh
+              - -c
+              - consul leave
+        env:
+        - name: POD_IP_ADDR
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        - name: NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+
+        ports:
+        - containerPort: 8500
+          name: http
+        - containerPort: 8301
+          name: serflan
+        - containerPort: 8302
+          name: serfwan
+        - containerPort: 8300
+          name: server
+        - containerPort: 8600
+          name: dns-tcp
+          protocol: TCP
+        - containerPort: 8600
+          name: dns-udp
+          protocol: UDP
+        readinessProbe:
+          # NOTE: when Consul HTTP status endpoints support the
+          # proper status codes, switch to that. This is temporary.
+          exec:
+            command:
+            - /bin/sh
+            - -ec
+            - curl http://127.0.0.1:8500/v1/status/leader 2>/dev/null | grep -E '".+"'
+          failureThreshold: 2
+          initialDelaySeconds: 5
+          periodSeconds: 3
+          successThreshold: 1
+          timeoutSeconds: 5
+
+
+# DaemonSet to run the Consul clients on every node.
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: consul-agent
+  labels:
+    app: consul-agent
+spec:
+  selector:
+    matchLabels:
+      app: consul-agent
+      hasDNS: "true"
+  template:
+    metadata:
+      labels:
+        app: consul-agent
+        hasDNS: "true"
+      annotations:
+        "consul.hashicorp.com/connect-inject": "false"
+    spec:
+      terminationGracePeriodSeconds: 10
+
+      # Consul agents require a directory for data, even clients. The data
+      # is okay to be wiped though if the Pod is removed, so just use an
+      # emptyDir volume.
+      volumes:
+      - name: data
+        emptyDir: {}
+
+      containers:
+      - name: consul
+        image: gcr.io/${project_id}/consul-enterprise:1.2.3
+        env:
+        - name: POD_IP_ADDR
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        - name: NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        command:
+        - /bin/sh
+        - -ec
+        - |
+          exec /bin/consul agent \
+            -advertise=$(POD_IP_ADDR) \
+            -bind=0.0.0.0 \
+            -client=0.0.0.0 \
+            -config-dir=/consul/config \
+            -datacenter=gcp1 \
+            -data-dir=/consul/data \
+            -domain=cluster.local \
+            -retry-join=consul-cluster-0.consul-cluster.$(NAMESPACE).svc.cluster.local \
+            -retry-join=consul-cluster-1.consul-cluster.$(NAMESPACE).svc.cluster.local \
+            -retry-join=consul-cluster-2.consul-cluster.$(NAMESPACE).svc.cluster.local
+        volumeMounts:
+        - name: data
+          mountPath: /consul/data
+        lifecycle:
+          preStop:
+            exec:
+              command:
+              - /bin/sh
+              - -c
+              - consul leave
+        ports:
+        - containerPort: 8500
+          hostPort: 8500
+          name: http
+        - containerPort: 8301
+          name: serflan
+        - containerPort: 8302
+          name: serfwan
+        - containerPort: 8300
+          name: server
+        - containerPort: 8600
+          name: dns-tcp
+          protocol: "TCP"
+        - containerPort: 8600
+          name: dns-udp
+          protocol: "UDP"
+        readinessProbe:
+          # NOTE: when Consul HTTP status endpoints support the
+          # proper status codes, switch to that. This is temporary.
+          exec:
+            command:
+            - /bin/sh
+            - -ec
+            - curl http://127.0.0.1:8500/v1/status/leader 2>/dev/null | grep -E '".+"'
