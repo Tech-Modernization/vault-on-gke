@@ -30,12 +30,35 @@ variable "service_account_iam_roles" {
   type = "list"
 
   default = [
-    "roles/resourcemanager.projectIamAdmin",
+    # https://cloud.google.com/kubernetes-engine/docs/how-to/hardening-your-cluster#use_least_privilege_sa
+    "roles/monitoring.viewer",
+    "roles/monitoring.metricWriter",
+    "roles/logging.logWriter",
+
+    # For GCR access
+    "roles/storage.objectViewer",
+
+    # For kms crypto keys get
+    "roles/viewer"
+  ]
+}
+
+# Runner of this terraform needs high organisation privs
+variable "tf_state_account_manage_org_iam_roles" {
+  type = "list"
+
+  default = [
+    "roles/resourcemanager.organizationAdmin"
+  ]
+}
+
+variable "tf_state_account_manage_project_iam_roles" {
+  type = "list"
+
+  default = [
     "roles/iam.serviceAccountAdmin",
     "roles/iam.serviceAccountKeyAdmin",
-    "roles/iam.serviceAccountTokenCreator",
-    "roles/iam.serviceAccountUser",
-    "roles/viewer",
+    "roles/storage.admin"
   ]
 }
 
@@ -73,5 +96,10 @@ variable "consul_license_path" {
 
 variable "vault_license_path" {
   description = "Path to Vault's license file"
+  type        = "string"
+}
+
+variable "terraform_state_project_id" {
+  description = "Destination project for service accounts"
   type        = "string"
 }

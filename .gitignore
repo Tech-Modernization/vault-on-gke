@@ -2,4 +2,8 @@ terraform/.terraform*
 terraform/credentials.json
 terraform/terraform.tfvars
 terraform/terraform.tfstate*
+configure/.terraform*
+configure/credentials.json
+configure/terraform.tfvars
+configure/terraform.tfstate*
 tls/*
