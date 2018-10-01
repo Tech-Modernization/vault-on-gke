@@ -43,6 +43,7 @@ variable "project_services" {
   type = "list"
 
   default = [
+    "cloudkms.googleapis.com",
     "cloudresourcemanager.googleapis.com",
     "container.googleapis.com",
     "iam.googleapis.com",

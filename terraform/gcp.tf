@@ -47,6 +47,29 @@ resource "google_project_service" "service" {
   disable_on_destroy = false
 }
 
+# Create the KMS key ring
+resource "google_kms_key_ring" "vault-seal" {
+  name     = "vault-keyring"
+  location = "${var.region}"
+  project  = "${google_project.vault.project_id}"
+
+  depends_on = ["google_project_service.service"]
+}
+
+# Create the crypto key for encrypting auto-unseal keys
+resource "google_kms_crypto_key" "vault-seal" {
+  name            = "vault-seal"
+  key_ring        = "${google_kms_key_ring.vault-seal.id}"
+  rotation_period = "604800s"
+}
+
+# Grant service account access to the key
+resource "google_kms_crypto_key_iam_member" "vault-seal" {
+  crypto_key_id = "${google_kms_crypto_key.vault-seal.id}"
+  role          = "roles/cloudkms.cryptoKeyEncrypterDecrypter"
+  member        = "serviceAccount:${google_service_account.vault-server.email}"
+}
+
 resource "google_compute_network" "shared_vpc" {
   name                    = "${random_id.random.hex}-vpc"
   auto_create_subnetworks = "false"
@@ -177,6 +200,7 @@ resource "google_container_node_pool" "vault" {
 
   depends_on = [
     "google_project_service.service",
+    "google_kms_crypto_key_iam_member.vault-seal",
     "google_project_iam_member.service-account",
   ]
 }
