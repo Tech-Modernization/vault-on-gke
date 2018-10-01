@@ -109,3 +109,50 @@ EOF
     "null_resource.wait-for-consul-ready",
   ]
 }
+
+# Wait for Vault to be up and waiting for initialisation
+resource "null_resource" "wait-for-vault-startup" {
+  provisioner "local-exec" {
+    command = <<EOF
+for i in {1..15}; do
+  sleep $i
+  if kubectl logs vault-cluster-0 | grep "security barrier not initialized"; then
+    exit 0
+  fi
+done
+
+echo "Vault pods are not ready after 2m"
+exit 1
+EOF
+  }
+
+  depends_on = [
+    "null_resource.apply-vault"
+  ]
+}
+
+# Vault init
+resource "null_resource" "vault-init" {
+  provisioner "local-exec" {
+    command = <<EOF
+gcloud container clusters get-credentials "${google_container_cluster.vault.name}" --zone="${google_container_cluster.vault.zone}" --project="${google_container_cluster.vault.project}"
+
+kubectl exec vault-cluster-0 -- \
+  vault operator init \
+    -stored-shares=1 \
+    -recovery-shares=1 \
+    -recovery-threshold=1 \
+    -key-shares=1 \
+    -key-threshold=1 \
+    -ca-cert /etc/vault/tls/ca.pem
+
+# reboot secondary Vault nodes
+kubectl exec vault-cluster-1 -- pkill vault
+kubectl exec vault-cluster-2 -- pkill vault
+EOF
+  }
+
+  depends_on = [
+    "null_resource.wait-for-vault-startup",
+  ]
+}
