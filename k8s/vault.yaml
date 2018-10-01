@@ -55,7 +55,7 @@ spec:
 
       containers:
       - name: vault
-        image: gcr.io/${project_id}/vault:0.11.1
+        image: gcr.io/${project_id}/vault-enterprise:0.11.1
         imagePullPolicy: Always
         args: ['server']
         securityContext:
