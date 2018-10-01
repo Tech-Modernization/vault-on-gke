@@ -107,7 +107,8 @@ resource "google_kms_crypto_key_iam_member" "vault-init" {
 
 # Get latest cluster version
 data "google_container_engine_versions" "versions" {
-  zone = "${var.zone}"
+  zone    = "${var.zone}"
+  project = "${google_project.vault.project_id}"
 }
 
 # Create the GKE cluster
