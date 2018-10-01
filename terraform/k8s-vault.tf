@@ -1,16 +1,31 @@
-# Pull Vault image and push to gcr.io
-resource "null_resource" "gcr-vault" {
+# Build Vault enterprise docker image
+resource "null_resource" "build-vault-image" {
+  provisioner "local-exec" {
+    command = <<EOF
+cd ../docker-vault/0.X && \
+    docker build \
+        --build-arg VAULT_VERSION=0.11.1 \
+        -t vault-enterprise:0.11.1 .
+EOF
+  }
+}
+
+# Push to Vault image to project gcr.io
+resource "null_resource" "push-vault-image-to-gcr" {
   triggers {
     project_id = "${google_project.vault.project_id}"
   }
 
   provisioner "local-exec" {
     command = <<EOF
-docker pull "vault:0.11.1"
-docker tag "vault:0.11.1" "gcr.io/${google_project.vault.project_id}/vault:0.11.1"
-docker push "gcr.io/${google_project.vault.project_id}/vault:0.11.1"
+docker tag "vault-enterprise:0.11.1" "gcr.io/${google_project.vault.project_id}/vault-enterprise:0.11.1"
+docker push "gcr.io/${google_project.vault.project_id}/vault-enterprise:0.11.1"
 EOF
   }
+
+  depends_on = [
+    "null_resource.build-vault-image",
+  ]
 }
 
 # Write TLS certs to kubernetes secrets
@@ -78,7 +93,7 @@ EOF
   # Consul must be setup
   depends_on = [
     "google_container_node_pool.vault",
-    "null_resource.gcr-vault",
+    "null_resource.push-vault-image-to-gcr",
     "null_resource.apply-consul"
   ]
 }
