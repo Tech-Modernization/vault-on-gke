@@ -17,6 +17,10 @@ variable "vault_project_id" {
   type          = "string"
 }
 
+variable "vault_service_account" {
+  description = "The service account id for the vault project"
+}
+
 variable "vault_token" {
   description   = "Vault token to use to configure vault"
   type          = "string"
@@ -25,4 +29,23 @@ variable "vault_token" {
 variable "terraform_state_project_id" {
   description = "Destination project for service accounts"
   type        = "string"
+}
+
+# Runner of this terraform needs high organisation privs
+variable "tf_state_account_manage_org_iam_roles" {
+  type = "list"
+
+  default = [
+    "roles/resourcemanager.organizationAdmin"
+  ]
+}
+
+variable "tf_state_account_manage_project_iam_roles" {
+  type = "list"
+
+  default = [
+    "roles/iam.serviceAccountAdmin",
+    "roles/iam.serviceAccountKeyAdmin",
+    "roles/storage.admin"
+  ]
 }

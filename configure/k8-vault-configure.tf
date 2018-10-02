@@ -18,7 +18,6 @@ data "google_project" "terraform-state" {
 
 resource "null_resource" "configure-vault" {
   triggers {
-    envconsul              = "${md5(data.template_file.envconsul.rendered)}"
     bootstrap              = "${md5(data.template_file.vault-configure.rendered)}"
   }
 
@@ -30,18 +29,10 @@ resource "null_resource" "configure-vault" {
     command = "echo '${data.template_file.vault-configure.rendered}'| kubectl apply -f -"
   }
 
-  provisioner "local-exec" {
-    command = "echo '${data.template_file.envconsul.rendered}'| kubectl apply -f -"
-  }
-}
-
-data "template_file" "envconsul" {
-  template = "${file("${path.module}/../k8s/envconsul.yaml")}"
-
-  vars {
-    project_id          = "${data.google_project.vault.project_id}"
-    vault_token         = "${var.vault_token}"
-  }
+#  provisioner "local-exec" {
+#    command = "echo '${data.template_file.vault-configure.rendered}'| kubectl delete -f -"
+#    when    = "destroy"
+#  }
 }
 
 data "template_file" "terraform-roles" {

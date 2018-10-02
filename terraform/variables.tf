@@ -43,25 +43,6 @@ variable "service_account_iam_roles" {
   ]
 }
 
-# Runner of this terraform needs high organisation privs
-variable "tf_state_account_manage_org_iam_roles" {
-  type = "list"
-
-  default = [
-    "roles/resourcemanager.organizationAdmin"
-  ]
-}
-
-variable "tf_state_account_manage_project_iam_roles" {
-  type = "list"
-
-  default = [
-    "roles/iam.serviceAccountAdmin",
-    "roles/iam.serviceAccountKeyAdmin",
-    "roles/storage.admin"
-  ]
-}
-
 variable "project_services" {
   type = "list"
 
@@ -96,10 +77,5 @@ variable "consul_license_path" {
 
 variable "vault_license_path" {
   description = "Path to Vault's license file"
-  type        = "string"
-}
-
-variable "terraform_state_project_id" {
-  description = "Destination project for service accounts"
   type        = "string"
 }

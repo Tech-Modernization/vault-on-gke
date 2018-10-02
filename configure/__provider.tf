@@ -4,6 +4,8 @@ provider "google" {
 }
 
 terraform {
+  required_version = "0.11.7"
+
   backend "gcs" {
     prefix = "vault-configure"
   }

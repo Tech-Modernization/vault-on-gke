@@ -7,10 +7,6 @@ data "google_organization" "org" {
   domain = "${var.org}"
 }
 
-data "google_project" "terraform-state" {
-  project_id = "${var.terraform_state_project_id}"
-}
-
 # Create the project
 resource "google_project" "vault" {
   name            = "${random_id.random.hex}"
@@ -36,21 +32,6 @@ resource "google_project_iam_member" "service-account" {
   count   = "${length(var.service_account_iam_roles)}"
   project = "${google_project.vault.project_id}"
   role    = "${element(var.service_account_iam_roles, count.index)}"
-  member  = "serviceAccount:${google_service_account.vault-server.email}"
-}
-
-# Require organisation admin priv's to create a terraform user
-resource "google_organization_iam_member" "terraform-state" {
-  count   = "${length(var.tf_state_account_manage_org_iam_roles)}"
-  org_id = "${data.google_organization.org.id}"
-  role    = "${element(var.tf_state_account_manage_org_iam_roles, count.index)}"
-  member  = "serviceAccount:${google_service_account.vault-server.email}"
-}
-
-resource "google_project_iam_member" "terraform-state" {
-  count   = "${length(var.tf_state_account_manage_project_iam_roles)}"
-  project = "${data.google_project.terraform-state.project_id}"
-  role    = "${element(var.tf_state_account_manage_project_iam_roles, count.index)}"
   member  = "serviceAccount:${google_service_account.vault-server.email}"
 }
 
@@ -164,7 +145,7 @@ resource "google_container_cluster" "vault" {
         display_name = "OPT_A29F_5GHz"
       },
       {
-        cidr_block = "1.152.110.10/32",
+        cidr_block = "1.152.110.58/32",
         display_name = "T4GXP_MFG7 4G"
       },
     ]
@@ -247,4 +228,8 @@ output "region" {
 
 output "zone" {
   value = "${var.zone}"
+}
+
+output "vault_service_account" {
+  value = "${google_service_account.vault-server.email}"
 }
