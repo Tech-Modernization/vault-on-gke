@@ -31,10 +31,10 @@ resource "null_resource" "envconsul" {
     command = "echo '${data.template_file.envconsul.rendered}'| kubectl apply -f -"
   }
 
-#  provisioner "local-exec" {
-#    command = "echo '${data.template_file.envconsul.rendered}'| kubectl delete -f -"
-#    when    = "destroy"
-#  }
+  provisioner "local-exec" {
+    command = "echo '${data.template_file.envconsul.rendered}'| kubectl delete -f -"
+    when    = "destroy"
+  }
 }
 
 data "template_file" "envconsul" {

@@ -9,6 +9,11 @@ data:
       "type": "gcp"
     }
 
+  approle-enable.json: |
+    {
+      "type": "approle"
+    }
+
   gcp-config.json: |
     {
       "ttl": "15m",
@@ -20,6 +25,16 @@ data:
       "secret_type": "service_account_key",
       "project": "${tf_state_project_id}",
       "bindings": "${tf_state_bindings}"
+    }
+
+  bamboo-policy.json: |
+    {
+      "policy": "${bamboo_policy}"
+    }
+
+  bamboo-approle.json: |
+    {
+      "policies":"bamboo"
     }
 
 ---
@@ -48,6 +63,12 @@ spec:
           /usr/bin/curl -v -k \
             --cacert /etc/vault/tls/ca.pem \
             -H "X-Vault-Token: ${vault_token}" \
+            --data @/opt/bootstrap/approle-enable.json \
+            https://vault-cluster:8200/v1/sys/auth/approle \
+          && \
+          /usr/bin/curl -v -k \
+            --cacert /etc/vault/tls/ca.pem \
+            -H "X-Vault-Token: ${vault_token}" \
             --data @/opt/bootstrap/gcp-enable.json \
             "https://vault-cluster:8200/v1/sys/mounts/gcp" \
           && \
@@ -63,7 +84,27 @@ spec:
             --cacert /etc/vault/tls/ca.pem \
             -H "X-Vault-Token: ${vault_token}" \
             --data @/opt/bootstrap/terraform-roleset.json \
-            https://vault-cluster:8200/v1/gcp/roleset/terraform
+            https://vault-cluster:8200/v1/gcp/roleset/terraform \
+          && \
+          /usr/bin/curl -v -k \
+            -H "X-Vault-Token: ${vault_token}" \
+            --request PUT \
+            --data @/opt/bootstrap/bamboo-policy.json \
+            https://vault-cluster:8200/v1/sys/policy/bamboo \
+          && \
+          /usr/bin/curl -v -k \
+            -H "X-Vault-Token: ${vault_token}" \
+            --data @/opt/bootstrap/bamboo-approle.json \
+            https://vault-cluster:8200/v1/auth/approle/role/bamboo \
+          && \
+          /usr/bin/curl -v -k \
+            -H "X-Vault-Token: ${vault_token}" \
+            https://vault-cluster:8200/v1/auth/approle/role/bamboo/role-id \
+          && \
+          /usr/bin/curl -v -k \
+            -H "X-Vault-Token: ${vault_token}" \
+            -X POST \
+            https://vault-cluster:8200/v1/auth/approle/role/bamboo/secret-id
 
         volumeMounts:
         - name: config-volume

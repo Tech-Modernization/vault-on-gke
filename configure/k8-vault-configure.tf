@@ -29,10 +29,10 @@ resource "null_resource" "configure-vault" {
     command = "echo '${data.template_file.vault-configure.rendered}'| kubectl apply -f -"
   }
 
-#  provisioner "local-exec" {
-#    command = "echo '${data.template_file.vault-configure.rendered}'| kubectl delete -f -"
-#    when    = "destroy"
-#  }
+  provisioner "local-exec" {
+    command = "echo '${data.template_file.vault-configure.rendered}'| kubectl delete -f -"
+    when    = "destroy"
+  }
 }
 
 data "template_file" "terraform-roles" {
@@ -44,6 +44,10 @@ data "template_file" "terraform-roles" {
   }
 }
 
+data "local_file" "bamboo-policy" {
+  filename = "${"${path.module}/../config/bamboo-policy.hcl"}"
+}
+
 data "template_file" "vault-configure" {
   template = "${file("${path.module}/../k8s/vault-configure.yaml")}"
 
@@ -52,6 +56,7 @@ data "template_file" "vault-configure" {
     project_id          = "${data.google_project.vault.project_id}"
     tf_state_project_id = "${data.google_project.terraform-state.project_id}"
     tf_state_bindings   = "${base64encode(data.template_file.terraform-roles.rendered)}"
+    bamboo_policy       = "${base64encode(data.local_file.bamboo-policy.content)}"
     vault_token         = "${var.vault_token}"
   }
 }
