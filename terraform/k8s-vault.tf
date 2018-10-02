@@ -48,7 +48,7 @@ resource "kubernetes_secret" "vault-data" {
   }
 
   data {
-    "vault.license" = "${file(var.vault_license_path)}"
+    "vault.license.json" = "{ \"text\": \"${chomp(file(var.vault_license_path))}\" }"
   }
 }
 
