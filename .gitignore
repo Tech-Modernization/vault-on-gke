@@ -6,4 +6,8 @@ configure/.terraform*
 configure/credentials.json
 configure/terraform.tfvars
 configure/terraform.tfstate*
+configure/envconsul/.terraform*
+configure/envconsul/credentials.json
+configure/envconsul/terraform.tfvars
+configure/envconsul/terraform.tfstate*
 tls/*

@@ -1,3 +1,13 @@
+data "google_project" "vault" {
+  project_id = "${var.vault_project_id}"
+}
+
+data "google_container_cluster" "vault" {
+  project   = "${data.google_project.vault.project_id}"
+  name      = "vault"
+  zone      = "${var.zone}"
+}
+
 # Pull Vault image and push to gcr.io
 resource "null_resource" "gcr-envconsol" {
   triggers {
@@ -32,13 +42,13 @@ resource "null_resource" "envconsul" {
   }
 
   provisioner "local-exec" {
-    command = "echo '${data.template_file.envconsul.rendered}'| kubectl delete -f -"
+    command = "echo '${data.template_file.envconsul.rendered}'| kubectl delete --ignore-not-found=true -f -"
     when    = "destroy"
   }
 }
 
 data "template_file" "envconsul" {
-  template = "${file("${path.module}/../k8s/envconsul.yaml")}"
+  template = "${file("${path.module}/../../k8s/envconsul.yaml")}"
 
   vars {
     project_id          = "${data.google_project.vault.project_id}"
