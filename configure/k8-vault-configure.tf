@@ -16,11 +16,18 @@ data "google_project" "terraform-state" {
   project_id = "${var.terraform_state_project_id}"
 }
 
+locals {
+  exec_pod      = "vault-cluster-0"
+  curl          = "kubectl exec ${local.exec_pod} -- curl --cacert /etc/vault/tls/ca.pem -H \"X-Vault-Token: ${var.vault_token}\""
+}
+
 resource "null_resource" "configure-vault" {
   triggers {
-    bamboo_policy             = "${md5(data.local_file.bamboo-policy.content)}"
-    terraform_state_project   = "${data.google_project.terraform-state.project_id}"
-    terraform_roles           = "${md5(data.template_file.terraform-roles.rendered)}"
+    deployment_policy           = "${md5(data.local_file.deployment-policy.content)}"
+    terraform_state_project     = "${data.google_project.terraform-state.project_id}"
+    terraform_roles             = "${md5(data.template_file.terraform-roles.rendered)}"
+    service_account_key_ttl     = "${var.service_account_key_ttl}"
+    service_account_key_max_ttl = "${var.service_account_key_max_ttl}"
   }
 
   provisioner "local-exec" {
@@ -28,35 +35,46 @@ resource "null_resource" "configure-vault" {
   }
 
   provisioner "local-exec" {
-    command = "kubectl exec vault-cluster-0 -- curl --cacert /etc/vault/tls/ca.pem -H \"X-Vault-Token: ${var.vault_token}\" --data '{ \"type\": \"approle\" }' https://127.0.0.1:8200/v1/sys/auth/approle"
+    command = "${local.curl} --data '{ \"type\": \"approle\" }' https://127.0.0.1:8200/v1/sys/auth/approle"
   }
 
   provisioner "local-exec" {
-    command = "kubectl exec vault-cluster-0 -- curl --cacert /etc/vault/tls/ca.pem -H \"X-Vault-Token: ${var.vault_token}\" --data '{ \"type\": \"gcp\" }' https://127.0.0.1:8200/v1/sys/mounts/gcp"
+    command = "${local.curl} --data '{ \"type\": \"gcp\" }' https://127.0.0.1:8200/v1/sys/mounts/gcp"
   }
 
   provisioner "local-exec" {
-    command = "kubectl exec vault-cluster-0 -- curl --cacert /etc/vault/tls/ca.pem -H \"X-Vault-Token: ${var.vault_token}\" --data '{ \"ttl\": \"15m\", \"max_ttl\": \"15m\" }' https://127.0.0.1:8200/v1/gcp/config"
+    command = "${local.curl} --data '{ \"ttl\": \"${var.service_account_key_ttl}\", \"max_ttl\": \"${var.service_account_key_max_ttl}\" }' https://127.0.0.1:8200/v1/gcp/config"
   }
 
   provisioner "local-exec" {
-    command = "kubectl exec vault-cluster-0 -- curl --cacert /etc/vault/tls/ca.pem -H \"X-Vault-Token: ${var.vault_token}\" --data '{ \"secret_type\": \"service_account_key\", \"project\": \"${data.google_project.terraform-state.project_id}\", \"bindings\": \"${base64encode(data.template_file.terraform-roles.rendered)}\" }' https://127.0.0.1:8200/v1/gcp/roleset/terraform"
+    command = "${local.curl} --data '{ \"secret_type\": \"service_account_key\", \"project\": \"${data.google_project.terraform-state.project_id}\", \"bindings\": \"${base64encode(data.template_file.terraform-roles.rendered)}\" }' https://127.0.0.1:8200/v1/gcp/roleset/terraform"
   }
 
   provisioner "local-exec" {
-    command = "kubectl exec vault-cluster-0 -- curl --cacert /etc/vault/tls/ca.pem -H \"X-Vault-Token: ${var.vault_token}\" -X PUT --data '{ \"policy\": \"${base64encode(data.local_file.bamboo-policy.content)}\" }' https://127.0.0.1:8200/v1/sys/policy/bamboo"
+    command = "${local.curl} -X PUT --data '{ \"policy\": \"${base64encode(data.local_file.deployment-policy.content)}\" }' https://127.0.0.1:8200/v1/sys/policy/deployment"
+  }
+
+}
+
+resource "null_resource" "configure-deployment-user" {
+  depends_on = [
+    "null_resource.configure-vault"
+  ]
+
+  triggers {
+    deployment_username     = "${var.deployment_username}"
   }
 
   provisioner "local-exec" {
-    command = "kubectl exec vault-cluster-0 -- curl --cacert /etc/vault/tls/ca.pem -H \"X-Vault-Token: ${var.vault_token}\" --data '{ \"policies\": \"bamboo\" }' https://127.0.0.1:8200/v1/auth/approle/role/bamboo"
+    command = "${local.curl} --data '{ \"policies\": \"deployment\" }' https://127.0.0.1:8200/v1/auth/approle/role/${var.deployment_username}"
   }
 
   provisioner "local-exec" {
-    command = "kubectl exec vault-cluster-0 -- curl --cacert /etc/vault/tls/ca.pem -H \"X-Vault-Token: ${var.vault_token}\" https://127.0.0.1:8200/v1/auth/approle/role/bamboo/role-id"
+    command = "${local.curl} https://127.0.0.1:8200/v1/auth/approle/role/${var.deployment_username}/role-id"
   }
 
   provisioner "local-exec" {
-    command = "kubectl exec vault-cluster-0 -- curl --cacert /etc/vault/tls/ca.pem -H \"X-Vault-Token: ${var.vault_token}\" -X POST https://127.0.0.1:8200/v1/auth/approle/role/bamboo/secret-id"
+    command = "${local.curl} -X POST https://127.0.0.1:8200/v1/auth/approle/role/${var.deployment_username}/secret-id"
   }
 }
 
@@ -69,6 +87,6 @@ data "template_file" "terraform-roles" {
   }
 }
 
-data "local_file" "bamboo-policy" {
-  filename = "${"${path.module}/../config/bamboo-policy.hcl"}"
+data "local_file" "deployment-policy" {
+  filename = "${"${path.module}/../config/deployment-policy.hcl"}"
 }

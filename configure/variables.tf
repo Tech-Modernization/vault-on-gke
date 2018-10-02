@@ -49,3 +49,21 @@ variable "tf_state_account_manage_project_iam_roles" {
     "roles/storage.admin"
   ]
 }
+
+variable "service_account_key_ttl" {
+  type          = "string"
+  description   = "Specifies default config TTL for long-lived service account keys"
+  default       = "15m"
+}
+
+variable "service_account_key_max_ttl" {
+  description   = "Specifies the maximum config TTL for long-lived service account keys"
+  type          = "string"
+  default       = "15m"
+}
+
+variable "deployment_username" {
+  description = "The username of the app that will be obtaining the terraform service account key. This becomes the AppRole RoleID."
+  type        = "string"
+  default     = "bamboo"
+}
