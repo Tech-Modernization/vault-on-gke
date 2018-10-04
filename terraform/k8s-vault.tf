@@ -13,13 +13,13 @@ EOF
 # Push to Vault image to project gcr.io
 resource "null_resource" "push-vault-image-to-gcr" {
   triggers {
-    project_id = "${google_project.vault.project_id}"
+    project_id = "${data.google_project.vault.project_id}"
   }
 
   provisioner "local-exec" {
     command = <<EOF
-docker tag "vault-enterprise:0.11.1" "gcr.io/${google_project.vault.project_id}/vault-enterprise:0.11.1"
-docker push "gcr.io/${google_project.vault.project_id}/vault-enterprise:0.11.1"
+docker tag "vault-enterprise:0.11.1" "gcr.io/${data.google_project.vault.project_id}/vault-enterprise:0.11.1"
+docker push "gcr.io/${data.google_project.vault.project_id}/vault-enterprise:0.11.1"
 EOF
   }
 
@@ -59,7 +59,7 @@ resource "kubernetes_config_map" "vault" {
   }
 
   data {
-    load_balancer_address = "${google_compute_address.vault.address}"
+    load_balancer_address = "${data.google_compute_address.vault.address}"
   }
 }
 
@@ -68,9 +68,9 @@ data "template_file" "vault" {
   template = "${file("${path.module}/../k8s/vault.yaml")}"
 
   vars {
-    load_balancer_ip  = "${google_compute_address.vault.address}"
+    load_balancer_ip  = "${data.google_compute_address.vault.address}"
     num_vault_servers = "${var.num_vault_servers}"
-    project_id        = "${google_project.vault.project_id}"
+    project_id        = "${data.google_project.vault.project_id}"
     region            = "${var.region}"
   }
 }

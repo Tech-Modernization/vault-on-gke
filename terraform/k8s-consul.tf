@@ -13,13 +13,13 @@ EOF
 # Push to Consul image to project gcr.io
 resource "null_resource" "push-consul-image-to-gcr" {
   triggers {
-    project_id = "${google_project.vault.project_id}"
+    project_id = "${data.google_project.vault.project_id}"
   }
 
   provisioner "local-exec" {
     command = <<EOF
-docker tag "consul-enterprise:1.2.3" "gcr.io/${google_project.vault.project_id}/consul-enterprise:1.2.3"
-docker push "gcr.io/${google_project.vault.project_id}/consul-enterprise:1.2.3"
+docker tag "consul-enterprise:1.2.3" "gcr.io/${data.google_project.vault.project_id}/consul-enterprise:1.2.3"
+docker push "gcr.io/${data.google_project.vault.project_id}/consul-enterprise:1.2.3"
 EOF
   }
 
@@ -44,7 +44,7 @@ data "template_file" "consul" {
   template = "${file("${path.module}/../k8s/consul.yaml")}"
 
   vars {
-    project_id = "${google_project.vault.project_id}"
+    project_id = "${data.google_project.vault.project_id}"
   }
 }
 

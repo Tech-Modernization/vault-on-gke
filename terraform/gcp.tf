@@ -1,25 +1,26 @@
-resource "random_id" "random" {
-  prefix      = "vault-"
-  byte_length = "8"
+data "google_project" "vault" {
+  project_id = "${var.project_id}"
 }
 
-data "google_organization" "org" {
-  domain = "${var.org}"
+data "google_project" "host_project" {
+  project_id = "${var.host_project_id}"
 }
 
-# Create the project
-resource "google_project" "vault" {
-  name            = "${random_id.random.hex}"
-  project_id      = "${random_id.random.hex}"
-  org_id          = "${data.google_organization.org.id}"
-  billing_account = "${var.billing_account}"
+data "google_compute_subnetwork" "service_subnet" {
+  name    = "${data.google_project.vault.project_id}-subnet-gke" # FIXME Change to explicit reference
+  project = "${data.google_project.host_project.id}"
+}
+
+data "google_compute_address" "vault" {
+  name  = "vault-lb"
+  project = "${data.google_project.vault.project_id}"
 }
 
 # Create the vault service account
 resource "google_service_account" "vault-server" {
   account_id   = "vault-server"
   display_name = "Vault Server"
-  project      = "${google_project.vault.project_id}"
+  project      = "${data.google_project.vault.project_id}"
 }
 
 # Create a service account key
@@ -30,30 +31,16 @@ resource "google_service_account_key" "vault" {
 # Add the service account to the project
 resource "google_project_iam_member" "service-account" {
   count   = "${length(var.service_account_iam_roles)}"
-  project = "${google_project.vault.project_id}"
+  project = "${data.google_project.vault.project_id}"
   role    = "${element(var.service_account_iam_roles, count.index)}"
   member  = "serviceAccount:${google_service_account.vault-server.email}"
-}
-
-# Enable required services on the project
-resource "google_project_service" "service" {
-  count   = "${length(var.project_services)}"
-  project = "${google_project.vault.project_id}"
-  service = "${element(var.project_services, count.index)}"
-
-  # Do not disable the service on destroy. On destroy, we are going to
-  # destroy the project, but we need the APIs available to destroy the
-  # underlying resources.
-  disable_on_destroy = false
 }
 
 # Create the KMS key ring
 resource "google_kms_key_ring" "vault-seal" {
   name     = "vault-keyring"
   location = "${var.region}"
-  project  = "${google_project.vault.project_id}"
-
-  depends_on = ["google_project_service.service"]
+  project  = "${data.google_project.vault.project_id}"
 }
 
 # Create the crypto key for encrypting auto-unseal keys
@@ -70,67 +57,31 @@ resource "google_kms_crypto_key_iam_member" "vault-seal" {
   member        = "serviceAccount:${google_service_account.vault-server.email}"
 }
 
-resource "google_compute_network" "shared_vpc" {
-  name                    = "${random_id.random.hex}-vpc"
-  auto_create_subnetworks = "false"
-  routing_mode            = "GLOBAL"
-  project                 = "${google_project.vault.project_id}"
-
-  depends_on = ["google_project_service.service"]
-}
-
-resource "google_compute_subnetwork" "service_subnet" {
-  name          = "${random_id.random.hex}-subnet"
-  project       = "${google_project.vault.project_id}"
-  ip_cidr_range = "10.100.0.0/24"
-  network       = "${google_compute_network.shared_vpc.self_link}"
-
-  # access PaaS without external IP
-  private_ip_google_access = true
-}
-
-# Allow inbound traffic on 8200
-resource "google_compute_firewall" "vault-inbound" {
-  name    = "${google_project.vault.project_id}-vault-inbound"
-  project = "${google_project.vault.project_id}"
-  network = "${google_compute_network.shared_vpc.self_link}"
-
-  direction = "INGRESS"
-  allow {
-    protocol = "tcp"
-    ports    = ["8200"]
-  }
-
-  source_ranges = [
-    "0.0.0.0/0"
-  ]
-}
-
 # Get latest cluster version
 data "google_container_engine_versions" "versions" {
   zone    = "${var.zone}"
-  project = "${google_project.vault.project_id}"
+  project = "${data.google_project.vault.project_id}"
 }
 
 # Create the GKE cluster
 resource "google_container_cluster" "vault" {
   name    = "vault"
-  project = "${google_project.vault.project_id}"
+  project = "${data.google_project.vault.project_id}"
   zone    = "${var.zone}"
 
   min_master_version = "${data.google_container_engine_versions.versions.latest_master_version}"
   node_version       = "${data.google_container_engine_versions.versions.latest_node_version}"
 
   # Deploy into VPC
-  network    = "${google_compute_subnetwork.service_subnet.network}"
-  subnetwork = "${google_compute_subnetwork.service_subnet.self_link}"
+  network    = "${data.google_compute_subnetwork.service_subnet.network}"
+  subnetwork = "${data.google_compute_subnetwork.service_subnet.self_link}"
 
   # Private GKE
   private_cluster        = true
   master_ipv4_cidr_block = "172.16.0.32/28"
   ip_allocation_policy   = {
-    cluster_ipv4_cidr_block = "/20"
-    services_ipv4_cidr_block = "/22"
+    cluster_secondary_range_name  = "${data.google_compute_subnetwork.service_subnet.secondary_ip_range.0.range_name}"
+    services_secondary_range_name = "${data.google_compute_subnetwork.service_subnet.secondary_ip_range.1.range_name}"
   }
 
   # Hosts authorized to connect to the cluster master
@@ -145,7 +96,7 @@ resource "google_container_cluster" "vault" {
         display_name = "OPT_A29F_5GHz"
       },
       {
-        cidr_block = "1.152.110.58/32",
+        cidr_block = "1.152.110.151/32",
         display_name = "T4GXP_MFG7 4G"
       },
     ]
@@ -170,7 +121,7 @@ resource "google_container_cluster" "vault" {
 resource "google_container_node_pool" "vault" {
   name    = "default-pool"
   cluster = "${google_container_cluster.vault.name}"
-  project = "${google_project.vault.project_id}"
+  project = "${data.google_project.vault.project_id}"
   zone    = "${var.zone}"
 
   initial_node_count = "${var.num_vault_servers}"
@@ -199,27 +150,17 @@ resource "google_container_node_pool" "vault" {
   }
 
   depends_on = [
-    "google_project_service.service",
     "google_kms_crypto_key_iam_member.vault-seal",
     "google_project_iam_member.service-account",
   ]
 }
 
-# Provision an external static IP for Vault
-resource "google_compute_address" "vault" {
-  name    = "vault-lb"
-  region  = "${var.region}"
-  project = "${google_project.vault.project_id}"
-
-  depends_on = ["google_project_service.service"]
-}
-
 output "address" {
-  value = "${google_compute_address.vault.address}"
+  value = "${data.google_compute_address.vault.address}"
 }
 
 output "project" {
-  value = "${google_project.vault.project_id}"
+  value = "${data.google_project.vault.project_id}"
 }
 
 output "region" {

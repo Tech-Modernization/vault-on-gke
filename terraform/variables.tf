@@ -8,17 +8,12 @@ variable "zone" {
   default = "australia-southeast1-a"
 }
 
-variable "project" {
-  type    = "string"
-  default = ""
+variable "project_id" {
+  description = "The service project ID containing the service account."
 }
 
-variable "billing_account" {
-  type = "string"
-}
-
-variable "org" {
-  type = "string"
+variable "host_project_id" {
+  description = "The host project."
 }
 
 variable "instance_type" {
@@ -40,18 +35,6 @@ variable "service_account_iam_roles" {
 
     # For kms crypto keys get
     "roles/viewer"
-  ]
-}
-
-variable "project_services" {
-  type = "list"
-
-  default = [
-    "cloudkms.googleapis.com",
-    "cloudresourcemanager.googleapis.com",
-    "container.googleapis.com",
-    "iam.googleapis.com",
-    "logging.googleapis.com",
   ]
 }
 
@@ -78,4 +61,10 @@ variable "consul_license_path" {
 variable "vault_license_path" {
   description = "Path to Vault's license file"
   type        = "string"
+}
+
+variable "external_address" {
+  description = "The pre created external IP address to bind the LB to"
+  type        = "string"
+  default     = "vault-lb"
 }

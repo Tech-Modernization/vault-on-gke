@@ -10,7 +10,7 @@ Manually add organisation administrator to the vault server service account:
 
 ```
 export ORG_ID=931373029707
-export VAULT_SERVICE_ACCOUNT=vault-server@vault-010e98cf0ff74b4d.iam.gserviceaccount.com
+export VAULT_SERVICE_ACCOUNT=vault-server@anz-cs-vault-np-53f94c.iam.gserviceaccount.com
 gcloud organizations add-iam-policy-binding "$ORG_ID" \
     --member "serviceAccount:$VAULT_SERVICE_ACCOUNT" \
     --role "roles/resourcemanager.organizationAdmin"
