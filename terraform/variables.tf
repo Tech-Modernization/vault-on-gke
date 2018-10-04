@@ -30,12 +30,16 @@ variable "service_account_iam_roles" {
   type = "list"
 
   default = [
-    "roles/resourcemanager.projectIamAdmin",
-    "roles/iam.serviceAccountAdmin",
-    "roles/iam.serviceAccountKeyAdmin",
-    "roles/iam.serviceAccountTokenCreator",
-    "roles/iam.serviceAccountUser",
-    "roles/viewer",
+    # https://cloud.google.com/kubernetes-engine/docs/how-to/hardening-your-cluster#use_least_privilege_sa
+    "roles/monitoring.viewer",
+    "roles/monitoring.metricWriter",
+    "roles/logging.logWriter",
+
+    # For GCR access
+    "roles/storage.objectViewer",
+
+    # For kms crypto keys get
+    "roles/viewer"
   ]
 }
 

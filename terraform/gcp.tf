@@ -145,7 +145,7 @@ resource "google_container_cluster" "vault" {
         display_name = "OPT_A29F_5GHz"
       },
       {
-        cidr_block = "1.136.108.64/32",
+        cidr_block = "1.152.110.58/32",
         display_name = "T4GXP_MFG7 4G"
       },
     ]
@@ -228,4 +228,8 @@ output "region" {
 
 output "zone" {
   value = "${var.zone}"
+}
+
+output "vault_service_account" {
+  value = "${google_service_account.vault-server.email}"
 }
