@@ -53,5 +53,6 @@ data "template_file" "envconsul" {
   vars {
     project_id          = "${data.google_project.vault.project_id}"
     vault_token         = "${var.vault_token}"
+    roleset_key_name    = "${var.rolset_key_name}"
   }
 }

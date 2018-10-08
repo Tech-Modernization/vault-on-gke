@@ -51,17 +51,17 @@ data "template_file" "consul" {
 # Submit the kubernetes config with kubectl
 resource "null_resource" "apply-consul" {
   triggers {
-    host     = "${md5(google_container_cluster.vault.endpoint)}"
-    username = "${md5(google_container_cluster.vault.master_auth.0.username)}"
-    password = "${md5(google_container_cluster.vault.master_auth.0.password)}"
+    host     = "${md5(data.google_container_cluster.vault.endpoint)}"
+    username = "${md5(data.google_container_cluster.vault.master_auth.0.username)}"
+    password = "${md5(data.google_container_cluster.vault.master_auth.0.password)}"
     template = "${md5(data.template_file.consul.rendered)}"
   }
 
   provisioner "local-exec" {
     command = <<EOF
-gcloud container clusters get-credentials "${google_container_cluster.vault.name}" --zone="${google_container_cluster.vault.zone}" --project="${google_container_cluster.vault.project}"
+gcloud container clusters get-credentials "${data.google_container_cluster.vault.name}" --zone="${data.google_container_cluster.vault.zone}" --project="${data.google_container_cluster.vault.project}"
 
-CONTEXT="gke_${google_container_cluster.vault.project}_${google_container_cluster.vault.zone}_${google_container_cluster.vault.name}"
+CONTEXT="gke_${data.google_container_cluster.vault.project}_${data.google_container_cluster.vault.zone}_${data.google_container_cluster.vault.name}"
 echo '${base64encode(data.template_file.consul.rendered)}' | base64 --decode | kubectl apply --context="$CONTEXT" -f -
 EOF
   }
@@ -70,7 +70,7 @@ EOF
   # Consul license must be available in kubernetes
   # Consul image must be in GCR
   depends_on = [
-    "google_container_node_pool.vault",
+    "module.vault-cluster",
     "kubernetes_secret.consul-license",
     "null_resource.push-consul-image-to-gcr",
   ]
@@ -99,7 +99,7 @@ EOF
 resource "null_resource" "consul-license" {
   provisioner "local-exec" {
     command = <<EOF
-gcloud container clusters get-credentials "${google_container_cluster.vault.name}" --zone="${google_container_cluster.vault.zone}" --project="${google_container_cluster.vault.project}"
+gcloud container clusters get-credentials "${data.google_container_cluster.vault.name}" --zone="${data.google_container_cluster.vault.zone}" --project="${data.google_container_cluster.vault.project}"
 
 kubectl exec consul-cluster-0 -- sh -c 'consul license put @/consul/license/consul.license'
 EOF

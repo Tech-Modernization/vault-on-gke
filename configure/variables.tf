@@ -3,12 +3,8 @@ variable "region" {
   default = "australia-southeast1"
 }
 
-variable "zone" {
-  type    = "string"
-  default = "australia-southeast1-a"
-}
-
-variable "org" {
+variable "organisation_id" {
+  description = "The owning organisation ID"
   type = "string"
 }
 
@@ -24,6 +20,11 @@ variable "vault_service_account" {
 variable "vault_token" {
   description   = "Vault token to use to configure vault"
   type          = "string"
+}
+
+variable "vault_cluster_name" {
+  description = "The cluster vault is deployed to that will be configured"
+  type        = "string"
 }
 
 variable "terraform_state_project_id" {
@@ -66,4 +67,10 @@ variable "deployment_username" {
   description = "The username of the app that will be obtaining the terraform service account key. This becomes the AppRole RoleID."
   type        = "string"
   default     = "bamboo"
+}
+
+variable "rolset_key_name" {
+  description = "The name of the roleset in Vault which will have keys generated and managed by Vault."
+  type        = "string"
+  default     = "deployment"
 }

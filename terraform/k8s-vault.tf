@@ -78,24 +78,19 @@ data "template_file" "vault" {
 # Submit the kubernetes config with kubectl
 resource "null_resource" "apply-vault" {
   triggers {
-    host                   = "${md5(google_container_cluster.vault.endpoint)}"
-    username               = "${md5(google_container_cluster.vault.master_auth.0.username)}"
-    password               = "${md5(google_container_cluster.vault.master_auth.0.password)}"
-    client_certificate     = "${md5(google_container_cluster.vault.master_auth.0.client_certificate)}"
-    client_key             = "${md5(google_container_cluster.vault.master_auth.0.client_key)}"
-    cluster_ca_certificate = "${md5(google_container_cluster.vault.master_auth.0.cluster_ca_certificate)}"
+    host                   = "${md5(data.google_container_cluster.vault.endpoint)}"
+    username               = "${md5(data.google_container_cluster.vault.master_auth.0.username)}"
+    password               = "${md5(data.google_container_cluster.vault.master_auth.0.password)}"
+    client_certificate     = "${md5(data.google_container_cluster.vault.master_auth.0.client_certificate)}"
+    client_key             = "${md5(data.google_container_cluster.vault.master_auth.0.client_key)}"
+    cluster_ca_certificate = "${md5(data.google_container_cluster.vault.master_auth.0.cluster_ca_certificate)}"
   }
-
-  depends_on = [
-    "kubernetes_secret.vault-tls",
-    "kubernetes_config_map.vault",
-  ]
 
   provisioner "local-exec" {
     command = <<EOF
-gcloud container clusters get-credentials "${google_container_cluster.vault.name}" --zone="${google_container_cluster.vault.zone}" --project="${google_container_cluster.vault.project}"
+gcloud container clusters get-credentials "${data.google_container_cluster.vault.name}" --zone="${data.google_container_cluster.vault.zone}" --project="${data.google_container_cluster.vault.project}"
 
-CONTEXT="gke_${google_container_cluster.vault.project}_${google_container_cluster.vault.zone}_${google_container_cluster.vault.name}"
+CONTEXT="gke_${data.google_container_cluster.vault.project}_${data.google_container_cluster.vault.zone}_${data.google_container_cluster.vault.name}"
 echo '${base64encode(data.template_file.vault.rendered)}' | base64 --decode | kubectl apply --context="$CONTEXT" -f -
 EOF
   }
@@ -104,7 +99,11 @@ EOF
   # Vault image must be in GCR
   # Consul must be setup
   depends_on = [
-    "google_container_node_pool.vault",
+    "module.vault-cluster",
+    "google_kms_crypto_key_iam_member.vault-seal",
+    "kubernetes_secret.vault-tls",
+    "kubernetes_config_map.vault",
+
     "null_resource.push-vault-image-to-gcr",
     "null_resource.wait-for-consul-ready",
   ]
@@ -135,7 +134,7 @@ EOF
 resource "null_resource" "vault-init" {
   provisioner "local-exec" {
     command = <<EOF
-gcloud container clusters get-credentials "${google_container_cluster.vault.name}" --zone="${google_container_cluster.vault.zone}" --project="${google_container_cluster.vault.project}"
+gcloud container clusters get-credentials "${data.google_container_cluster.vault.name}" --zone="${data.google_container_cluster.vault.zone}" --project="${data.google_container_cluster.vault.project}"
 
 kubectl exec vault-cluster-0 -- \
   vault operator init \
