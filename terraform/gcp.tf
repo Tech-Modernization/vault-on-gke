@@ -26,10 +26,6 @@ resource "google_kms_crypto_key" "vault-seal" {
   name            = "vault-seal-${random_id.key_suffix.hex}"
   key_ring        = "${google_kms_key_ring.vault-seal.id}"
   rotation_period = "604800s"
-
-  lifecycle {
-    prevent_destroy = true
-  }
 }
 
 # Grant service account access to the key
