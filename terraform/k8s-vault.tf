@@ -76,6 +76,7 @@ data "template_file" "vault" {
     num_vault_servers = "${var.num_vault_servers}"
     project_id        = "${data.google_project.vault.project_id}"
     region            = "${var.region}"
+    vault_seal        = "${google_kms_crypto_key.vault-seal.name}"
   }
 }
 

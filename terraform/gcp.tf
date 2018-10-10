@@ -14,11 +14,22 @@ resource "google_kms_key_ring" "vault-seal" {
   project  = "${data.google_project.vault.project_id}"
 }
 
+# https://www.terraform.io/docs/providers/google/r/google_kms_crypto_key.html
+# CryptoKeys cannot be deleted from Google Cloud Platform. Destroying a Terraform-managed CryptoKey will remove it
+# from state and delete all CryptoKeyVersions, rendering the key unusable, but will not delete the resource on the server.
+resource "random_id" "key_suffix" {
+  byte_length = 3
+}
+
 # Create the crypto key for encrypting auto-unseal keys
 resource "google_kms_crypto_key" "vault-seal" {
-  name            = "vault-seal"
+  name            = "vault-seal-${random_id.key_suffix.hex}"
   key_ring        = "${google_kms_key_ring.vault-seal.id}"
   rotation_period = "604800s"
+
+  lifecycle {
+    prevent_destroy = true
+  }
 }
 
 # Grant service account access to the key
@@ -53,7 +64,7 @@ module "vault-cluster" {
   #  monitoring_service = "${var.kubernetes_monitoring_service}"
 
   master_authorized_cidr_blocks = [
-    { cidr_block = "1.152.110.170/32", display_name = "T4GXP_MFG7 4G" }
+    { cidr_block = "1.136.104.130/32", display_name = "T4GXP_MFG7 4G" },
     # TODO Add bamboo addresses
 #        { cidr_block = "0.0.0.0/0" } # Cloud build and local access
   ]

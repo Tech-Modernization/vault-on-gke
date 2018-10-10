@@ -111,7 +111,7 @@ spec:
               project    = "${project_id}"
               region     = "${region}"
               key_ring   = "vault-keyring"
-              crypto_key = "vault-seal"
+              crypto_key = "${vault_seal}"
             }
 
             listener "tcp" {
