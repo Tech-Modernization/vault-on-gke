@@ -3,56 +3,21 @@ variable "region" {
   default = "australia-southeast1"
 }
 
-variable "zone" {
-  type    = "string"
-  default = "australia-southeast1-a"
+variable "project_id" {
+  description = "The service project ID containing the service account."
 }
 
-variable "project" {
-  type    = "string"
-  default = ""
+variable "host_project_id" {
+  description = "The host project."
 }
 
-variable "billing_account" {
-  type = "string"
-}
-
-variable "org" {
-  type = "string"
+variable "shared_vpc_name" {
+  description = "Shared VPC Name."
 }
 
 variable "instance_type" {
   type    = "string"
   default = "n1-standard-2"
-}
-
-variable "service_account_iam_roles" {
-  type = "list"
-
-  default = [
-    # https://cloud.google.com/kubernetes-engine/docs/how-to/hardening-your-cluster#use_least_privilege_sa
-    "roles/monitoring.viewer",
-    "roles/monitoring.metricWriter",
-    "roles/logging.logWriter",
-
-    # For GCR access
-    "roles/storage.objectViewer",
-
-    # For kms crypto keys get
-    "roles/viewer"
-  ]
-}
-
-variable "project_services" {
-  type = "list"
-
-  default = [
-    "cloudkms.googleapis.com",
-    "cloudresourcemanager.googleapis.com",
-    "container.googleapis.com",
-    "iam.googleapis.com",
-    "logging.googleapis.com",
-  ]
 }
 
 variable "kubernetes_logging_service" {
@@ -78,4 +43,10 @@ variable "consul_license_path" {
 variable "vault_license_path" {
   description = "Path to Vault's license file"
   type        = "string"
+}
+
+variable "external_address" {
+  description = "The pre created external IP address to bind the LB to"
+  type        = "string"
+  default     = "vault-lb"
 }

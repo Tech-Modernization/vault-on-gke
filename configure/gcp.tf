@@ -13,7 +13,7 @@ data "google_service_account" "vault-server" {
 
 resource "google_project_iam_member" "terraform-state" {
   count   = "${length(var.tf_state_account_manage_project_iam_roles)}"
-  project = "${data.google_project.terraform-state.project_id}"
+  project = "${var.terraform_state_project_id}"
   role    = "${element(var.tf_state_account_manage_project_iam_roles, count.index)}"
   member  = "serviceAccount:${data.google_service_account.vault-server.email}"
 }

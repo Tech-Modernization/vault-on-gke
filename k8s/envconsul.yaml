@@ -36,7 +36,7 @@ spec:
       containers:
       - name: envconsul
         image: gcr.io/${project_id}/envconsul:0.7.0-alpine
-        args: ["-config=/etc/envconsul/config.hcl", "-secret=gcp/key/terraform", "/usr/bin/env"]
+        args: ["-config=/etc/envconsul/config.hcl", "-secret=gcp/key/${roleset_key_name}", "/usr/bin/env"]
         volumeMounts:
         - name: config-volume
           mountPath: /etc/envconsul

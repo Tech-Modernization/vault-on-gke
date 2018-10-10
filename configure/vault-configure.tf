@@ -1,6 +1,3 @@
-data "google_organization" "org" {
-  domain = "${var.org}"
-}
 
 data "google_project" "vault" {
   project_id = "${var.vault_project_id}"
@@ -8,12 +5,8 @@ data "google_project" "vault" {
 
 data "google_container_cluster" "vault" {
   project   = "${data.google_project.vault.project_id}"
-  name      = "vault"
-  zone      = "${var.zone}"
-}
-
-data "google_project" "terraform-state" {
-  project_id = "${var.terraform_state_project_id}"
+  name      = "${var.vault_cluster_name}"
+  region    = "${var.region}"
 }
 
 locals {
@@ -24,10 +17,11 @@ locals {
 resource "null_resource" "configure-vault" {
   triggers {
     deployment_policy           = "${md5(data.local_file.deployment-policy.content)}"
-    terraform_state_project     = "${data.google_project.terraform-state.project_id}"
+    terraform_state_project     = "${var.terraform_state_project_id}"
     terraform_roles             = "${md5(data.template_file.terraform-roles.rendered)}"
     service_account_key_ttl     = "${var.service_account_key_ttl}"
     service_account_key_max_ttl = "${var.service_account_key_max_ttl}"
+    roleset_key_name            = "${var.rolset_key_name}"
   }
 
   provisioner "local-exec" {
@@ -47,7 +41,7 @@ resource "null_resource" "configure-vault" {
   }
 
   provisioner "local-exec" {
-    command = "${local.curl} --data '{ \"secret_type\": \"service_account_key\", \"project\": \"${data.google_project.terraform-state.project_id}\", \"bindings\": \"${base64encode(data.template_file.terraform-roles.rendered)}\" }' https://127.0.0.1:8200/v1/gcp/roleset/terraform"
+    command = "${local.curl} --data '{ \"secret_type\": \"service_account_key\", \"project\": \"${var.terraform_state_project_id}\", \"bindings\": \"${base64encode(data.template_file.terraform-roles.rendered)}\" }' https://127.0.0.1:8200/v1/gcp/roleset/${var.rolset_key_name}"
   }
 
   provisioner "local-exec" {
@@ -82,8 +76,8 @@ data "template_file" "terraform-roles" {
   template = "${file("${path.module}/../config/terraform-roles.hcl")}"
 
   vars {
-    org_id              = "${data.google_organization.org.id}"
-    tf_state_project_id = "${data.google_project.terraform-state.project_id}"
+    org_id              = "${var.organisation_id}"
+    tf_state_project_id = "${var.terraform_state_project_id}"
   }
 }
 

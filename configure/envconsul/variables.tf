@@ -17,3 +17,9 @@ variable "vault_token" {
   description   = "Vault token to use to configure vault"
   type          = "string"
 }
+
+variable "rolset_key_name" {
+  description = "The name of the roleset in Vault which to fetch keys for."
+  type        = "string"
+  default     = "deployment"
+}

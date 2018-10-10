@@ -8,13 +8,13 @@ provider "kubernetes" {
   # https://www.terraform.io/docs/providers/kubernetes/index.html#load_config_file
   load_config_file = false
 
-  host     = "${google_container_cluster.vault.endpoint}"
-  username = "${google_container_cluster.vault.master_auth.0.username}"
-  password = "${google_container_cluster.vault.master_auth.0.password}"
+  host     = "${data.google_container_cluster.vault.endpoint}"
+  username = "${data.google_container_cluster.vault.master_auth.0.username}"
+  password = "${data.google_container_cluster.vault.master_auth.0.password}"
 
-  client_certificate     = "${base64decode(google_container_cluster.vault.master_auth.0.client_certificate)}"
-  client_key             = "${base64decode(google_container_cluster.vault.master_auth.0.client_key)}"
-  cluster_ca_certificate = "${base64decode(google_container_cluster.vault.master_auth.0.cluster_ca_certificate)}"
+  client_certificate     = "${base64decode(data.google_container_cluster.vault.master_auth.0.client_certificate)}"
+  client_key             = "${base64decode(data.google_container_cluster.vault.master_auth.0.client_key)}"
+  cluster_ca_certificate = "${base64decode(data.google_container_cluster.vault.master_auth.0.cluster_ca_certificate)}"
 }
 
 terraform {
