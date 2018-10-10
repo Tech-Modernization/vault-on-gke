@@ -53,7 +53,7 @@ module "vault-cluster" {
   #  monitoring_service = "${var.kubernetes_monitoring_service}"
 
   master_authorized_cidr_blocks = [
-    { cidr_block = "203.110.235.135/32", display_name = "T4GXP_MFG7 4G" }
+    { cidr_block = "1.152.110.170/32", display_name = "T4GXP_MFG7 4G" }
     # TODO Add bamboo addresses
 #        { cidr_block = "0.0.0.0/0" } # Cloud build and local access
   ]
