@@ -18,6 +18,10 @@ resource "null_resource" "push-vault-image-to-gcr" {
 
   provisioner "local-exec" {
     command = <<EOF
+# authenticate gcloud cli tools
+gcloud auth activate-service-account --key-file $GOOGLE_APPLICATION_CREDENTIALS
+
+# tag and push
 docker tag "vault-enterprise:0.11.1" "gcr.io/${data.google_project.vault.project_id}/vault-enterprise:0.11.1"
 docker push "gcr.io/${data.google_project.vault.project_id}/vault-enterprise:0.11.1"
 EOF
