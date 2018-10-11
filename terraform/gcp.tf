@@ -41,7 +41,7 @@ module "vault-cluster" {
   project_id              = "${data.google_project.vault.project_id}"
   host_project_id         = "${var.host_project_id}"
   shared_vpc_name         = "${var.shared_vpc_name}"
-  master_ipv4_cidr_block  = "172.16.0.32/28"
+  master_ipv4_cidr_block  = "10.149.16.48/28"
 
   initial_node_count = "${var.num_vault_servers}"
 
@@ -60,9 +60,9 @@ module "vault-cluster" {
   #  monitoring_service = "${var.kubernetes_monitoring_service}"
 
   master_authorized_cidr_blocks = [
-    { cidr_block = "1.136.104.130/32", display_name = "T4GXP_MFG7 4G" },
-    # TODO Add bamboo addresses
-#        { cidr_block = "0.0.0.0/0" } # Cloud build and local access
+    { cidr_block = "1.136.0.0/16", display_name = "T4GXP_MFG7 4G" },
+    { cidr_block = "59.154.134.121/32", display_name = "Alteon App Internet Proxy" },
+#    { cidr_block = "0.0.0.0/0" } # Cloud build and local access
   ]
 }
 

@@ -12,16 +12,23 @@ data "google_container_cluster" "vault" {
 locals {
   exec_pod      = "vault-cluster-0"
   curl          = "kubectl exec ${local.exec_pod} -- curl --cacert /etc/vault/tls/ca.pem -H \"X-Vault-Token: ${var.vault_token}\""
+
+  policy_name   = "terraform-admin-keys"
 }
 
-resource "null_resource" "configure-vault" {
+resource "null_resource" "configure-admin-roleset" {
   triggers {
-    deployment_policy           = "${md5(data.local_file.deployment-policy.content)}"
     terraform_state_project     = "${var.terraform_state_project_id}"
-    terraform_roles             = "${md5(data.template_file.terraform-roles.rendered)}"
-    service_account_key_ttl     = "${var.service_account_key_ttl}"
-    service_account_key_max_ttl = "${var.service_account_key_max_ttl}"
-    roleset_key_name            = "${var.rolset_key_name}"
+    terraform_roles             = "${md5(data.template_file.terraform-admin-roles.rendered)}"
+    roleset_key_name            = "${var.roleset_key_name}"
+  }
+
+  depends_on = [
+    "google_project_iam_member.terraform-state"
+  ]
+
+  provisioner "local-exec" {
+    command = "gcloud auth activate-service-account --key-file $GOOGLE_APPLICATION_CREDENTIALS"
   }
 
   provisioner "local-exec" {
@@ -29,30 +36,41 @@ resource "null_resource" "configure-vault" {
   }
 
   provisioner "local-exec" {
-    command = "${local.curl} --data '{ \"type\": \"approle\" }' https://127.0.0.1:8200/v1/sys/auth/approle"
+    command = "${local.curl} --data '{ \"secret_type\": \"service_account_key\", \"project\": \"${var.terraform_state_project_id}\", \"bindings\": \"${base64encode(data.template_file.terraform-admin-roles.rendered)}\" }' https://127.0.0.1:8200/v1/gcp/roleset/${var.roleset_key_name}"
   }
 
   provisioner "local-exec" {
-    command = "${local.curl} --data '{ \"type\": \"gcp\" }' https://127.0.0.1:8200/v1/sys/mounts/gcp"
+    command = "${local.curl} -X DELETE https://127.0.0.1:8200/v1/gcp/roleset/${var.roleset_key_name}"
+    when    = "destroy"
+  }
+}
+
+resource "null_resource" "configure-admin-keys-policy" {
+  depends_on = [
+    "null_resource.configure-admin-roleset"
+  ]
+
+  triggers {
+    deployment_policy           = "${md5(data.template_file.terraform-admin-keys-policy.rendered)}"
   }
 
   provisioner "local-exec" {
-    command = "${local.curl} --data '{ \"ttl\": \"${var.service_account_key_ttl}\", \"max_ttl\": \"${var.service_account_key_max_ttl}\" }' https://127.0.0.1:8200/v1/gcp/config"
+    command = "gcloud auth activate-service-account --key-file $GOOGLE_APPLICATION_CREDENTIALS"
   }
 
   provisioner "local-exec" {
-    command = "${local.curl} --data '{ \"secret_type\": \"service_account_key\", \"project\": \"${var.terraform_state_project_id}\", \"bindings\": \"${base64encode(data.template_file.terraform-roles.rendered)}\" }' https://127.0.0.1:8200/v1/gcp/roleset/${var.rolset_key_name}"
+    command = "${local.curl} -X PUT --data '{ \"policy\": \"${base64encode(data.template_file.terraform-admin-keys-policy.rendered)}\" }' https://127.0.0.1:8200/v1/sys/policy/${local.policy_name}"
   }
 
   provisioner "local-exec" {
-    command = "${local.curl} -X PUT --data '{ \"policy\": \"${base64encode(data.local_file.deployment-policy.content)}\" }' https://127.0.0.1:8200/v1/sys/policy/deployment"
+    command = "${local.curl} -X DELETE https://127.0.0.1:8200/v1/sys/policy/${local.policy_name}"
+    when    = "destroy"
   }
-
 }
 
 resource "null_resource" "configure-deployment-user" {
   depends_on = [
-    "null_resource.configure-vault"
+    "null_resource.configure-admin-keys-policy"
   ]
 
   triggers {
@@ -60,7 +78,12 @@ resource "null_resource" "configure-deployment-user" {
   }
 
   provisioner "local-exec" {
-    command = "${local.curl} --data '{ \"policies\": \"deployment\" }' https://127.0.0.1:8200/v1/auth/approle/role/${var.deployment_username}"
+    command = "${local.curl} --data '{ \"policies\": \"${local.policy_name}\" }' https://127.0.0.1:8200/v1/auth/approle/role/${var.deployment_username}"
+  }
+
+  provisioner "local-exec" {
+    command = "${local.curl} -X DELETE https://127.0.0.1:8200/v1/auth/approle/role/${var.deployment_username}"
+    when    = "destroy"
   }
 
   provisioner "local-exec" {
@@ -72,8 +95,8 @@ resource "null_resource" "configure-deployment-user" {
   }
 }
 
-data "template_file" "terraform-roles" {
-  template = "${file("${path.module}/../config/terraform-roles.hcl")}"
+data "template_file" "terraform-admin-roles" {
+  template = "${file("${path.module}/../config/terraform-admin-roles.hcl")}"
 
   vars {
     org_id              = "${var.organisation_id}"
@@ -81,6 +104,10 @@ data "template_file" "terraform-roles" {
   }
 }
 
-data "local_file" "deployment-policy" {
-  filename = "${"${path.module}/../config/deployment-policy.hcl"}"
+data "template_file" "terraform-admin-keys-policy" {
+  template = "${file("${path.module}/../config/terraform-admin-keys-policy.hcl")}"
+
+  vars {
+    roleset_key_name     = "${var.roleset_key_name}"
+  }
 }

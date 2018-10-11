@@ -18,7 +18,7 @@ variable "vault_token" {
   type          = "string"
 }
 
-variable "rolset_key_name" {
+variable "roleset_key_name" {
   description = "The name of the roleset in Vault which to fetch keys for."
   type        = "string"
   default     = "deployment"

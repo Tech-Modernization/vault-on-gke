@@ -31,10 +31,26 @@ vault_cluster_name = "anz-cs-vault-np-gke"
 # Owning organisation
 export ORG_ID=931373029707
 # The cluster nodes service account
-export VAULT_SERVICE_ACCOUNT=anz-cs-vault-np-gke-nodes@anz-cs-vault-np-a55471.iam.gserviceaccount.com
+export VAULT_SERVICE_ACCOUNT=anz-cs-vault-np-gke-nodes@anz-cs-vault-np-cc93f0.iam.gserviceaccount.com
 gcloud organizations add-iam-policy-binding "$ORG_ID" \
     --member "serviceAccount:$VAULT_SERVICE_ACCOUNT" \
     --role "roles/resourcemanager.organizationAdmin"
 ```
 
 3. Execute the plan (`terraform apply`)
+
+## Destroying
+
+1. `terraform destroy`
+
+1. Manual cleanup
+
+```
+# Owning organisation
+export ORG_ID=931373029707
+# The cluster nodes service account
+export VAULT_SERVICE_ACCOUNT=anz-cs-vault-np-gke-nodes@anz-cs-vault-np-cc93f0.iam.gserviceaccount.com
+gcloud organizations remove-iam-policy-binding "$ORG_ID" \
+    --member "serviceAccount:$VAULT_SERVICE_ACCOUNT" \
+    --role "roles/resourcemanager.organizationAdmin"
+```
