@@ -1,15 +1,7 @@
-terraform/.terraform*
-terraform/credentials.json
-terraform/terraform.tfvars
-terraform/terraform.tfstate*
-configure/.terraform*
-configure/credentials.json
-configure/terraform.tfvars
-configure/terraform.tfstate*
-configure/envconsul/.terraform*
-configure/envconsul/credentials.json
-configure/envconsul/terraform.tfvars
-configure/envconsul/terraform.tfstate*
+terraform/**/.terraform*
+terraform/**/credentials.json
+terraform/**/terraform.tfvars
+terraform/**/terraform.tfstate*
 tls/*
 
 *.backend

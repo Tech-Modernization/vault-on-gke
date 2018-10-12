@@ -96,7 +96,7 @@ resource "null_resource" "configure-deployment-user" {
 }
 
 data "template_file" "terraform-admin-roles" {
-  template = "${file("${path.module}/../config/terraform-admin-roles.hcl")}"
+  template = "${file("${path.module}/../../hcl/terraform-admin-roles.hcl")}"
 
   vars {
     org_id              = "${var.organisation_id}"
@@ -105,7 +105,7 @@ data "template_file" "terraform-admin-roles" {
 }
 
 data "template_file" "terraform-admin-keys-policy" {
-  template = "${file("${path.module}/../config/terraform-admin-keys-policy.hcl")}"
+  template = "${file("${path.module}/../../hcl/terraform-admin-keys-policy.hcl")}"
 
   vars {
     roleset_key_name     = "${var.roleset_key_name}"

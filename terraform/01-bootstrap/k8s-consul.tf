@@ -45,7 +45,7 @@ resource "kubernetes_secret" "consul-license" {
 
 # Render the Consul YAML file
 data "template_file" "consul" {
-  template = "${file("${path.module}/../k8s/consul.yaml")}"
+  template = "${file("${path.module}/../../k8s/consul.yaml")}"
 
   vars {
     project_id = "${data.google_project.vault.project_id}"

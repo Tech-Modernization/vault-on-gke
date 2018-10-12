@@ -69,7 +69,7 @@ resource "kubernetes_config_map" "vault" {
 
 # Render the Vault YAML file
 data "template_file" "vault" {
-  template = "${file("${path.module}/../k8s/vault.yaml")}"
+  template = "${file("${path.module}/../../k8s/vault.yaml")}"
 
   vars {
     load_balancer_ip  = "${data.google_compute_address.vault.address}"
