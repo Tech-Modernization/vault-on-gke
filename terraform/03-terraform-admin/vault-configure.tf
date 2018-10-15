@@ -23,10 +23,6 @@ resource "null_resource" "configure-admin-roleset" {
     roleset_key_name            = "${var.roleset_key_name}"
   }
 
-  depends_on = [
-    "google_project_iam_member.terraform-state"
-  ]
-
   provisioner "local-exec" {
     command = "gcloud auth activate-service-account --key-file $GOOGLE_APPLICATION_CREDENTIALS"
   }

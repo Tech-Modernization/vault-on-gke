@@ -29,3 +29,7 @@ variable "service_account_key_max_ttl" {
   type          = "string"
   default       = "15m"
 }
+
+variable "org_admin_credentials" {
+  type    = "string"
+}

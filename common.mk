@@ -12,12 +12,15 @@ _init:
 	terraform init \
 		-backend-config=bucket=$(BACKEND_BUCKET) \
 		-backend-config=prefix=$(TIER) \
-		-reconfigure
-	terraform get -update
+		-reconfigure -get=false
 	@if ! terraform workspace list | grep -qE "^[* ][ ]$(ENV)$$"; then \
 		terraform workspace new $(ENV); \
 	fi
 	terraform workspace select $(ENV)
+
+get:
+	@echo "The following 'terraform get' command must be run on the ANZ staff network"
+	terraform get -update
 
 $(ORG)-$(ENV).tfvars:
 	@echo 'tfvars for $(ORG)-$(ENV) does not exist at $(ORG)-$(ENV).tfvars'

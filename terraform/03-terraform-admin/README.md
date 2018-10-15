@@ -1,7 +1,5 @@
 # Vault Configuration
 
-- Enables GCP Secrets engine
-- Configures vault to create terraform service account in the terraform state project and service account keys
 - Creates a `bamboo` AppRole, Role ID and Secret
 
 ## Usage
@@ -23,7 +21,7 @@ vault_token = "2QHbO3ZG6cnBoPjYCFpQg5mT"
 vault_cluster_name = "anz-cs-vault-np-gke"
 ```
 
-2. Manually (tech debt) update the vault cluster nodes service account to have organisation admin privileges. This is to allow vault to grant
+2. Manually (tech debt) update the `vault-gcp-secrets` service account in the terraform state project to have organisation admin privileges. This is to allow vault to grant
    organisation level IAMs to the managed terraform state service account.
    
 
@@ -31,7 +29,7 @@ vault_cluster_name = "anz-cs-vault-np-gke"
 # Owning organisation
 export ORG_ID=931373029707
 # The cluster nodes service account
-export VAULT_SERVICE_ACCOUNT=anz-cs-vault-np-gke-nodes@anz-cs-vault-np-cc93f0.iam.gserviceaccount.com
+export VAULT_SERVICE_ACCOUNT=vault-gcp-secrets@anzod-tf-state-931373029707.iam.gserviceaccount.com
 gcloud organizations add-iam-policy-binding "$ORG_ID" \
     --member "serviceAccount:$VAULT_SERVICE_ACCOUNT" \
     --role "roles/resourcemanager.organizationAdmin"
@@ -43,13 +41,13 @@ gcloud organizations add-iam-policy-binding "$ORG_ID" \
 
 1. `terraform destroy`
 
-1. Manual cleanup
+1. Manual cleanup, remove organisation admin privileges from the `vault-gcp-secrets` in the terraform state project.
 
 ```
 # Owning organisation
 export ORG_ID=931373029707
 # The cluster nodes service account
-export VAULT_SERVICE_ACCOUNT=anz-cs-vault-np-gke-nodes@anz-cs-vault-np-cc93f0.iam.gserviceaccount.com
+export VAULT_SERVICE_ACCOUNT=vault-gcp-secrets@anzod-tf-state-931373029707.iam.gserviceaccount.com
 gcloud organizations remove-iam-policy-binding "$ORG_ID" \
     --member "serviceAccount:$VAULT_SERVICE_ACCOUNT" \
     --role "roles/resourcemanager.organizationAdmin"
