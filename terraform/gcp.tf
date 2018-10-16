@@ -29,7 +29,7 @@ resource "google_kms_crypto_key_iam_member" "vault-seal" {
 }
 
 module "vault-cluster" {
-  source                  = "../../terraform-gcp/modules/resource-gke-regional-cluster" # FIXME This reference needs to be fixed for Bamboo
+  source                  = "git::https://github.service.anz/ics/terraform-gcp-modules.git//resource-gke-regional-cluster?ref=bd5ca66"
   region                  = "${var.region}"
   project_id              = "${data.google_project.vault.project_id}"
   host_project_id         = "${var.host_project_id}"
