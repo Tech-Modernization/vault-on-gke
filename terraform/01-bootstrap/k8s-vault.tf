@@ -18,6 +18,10 @@ resource "null_resource" "push-vault-image-to-gcr" {
 
   provisioner "local-exec" {
     command = <<EOF
+# authenticate gcloud cli tools
+gcloud auth activate-service-account --key-file $GOOGLE_APPLICATION_CREDENTIALS
+
+# tag and push
 docker tag "vault-enterprise:0.11.1" "gcr.io/${data.google_project.vault.project_id}/vault-enterprise:0.11.1"
 docker push "gcr.io/${data.google_project.vault.project_id}/vault-enterprise:0.11.1"
 EOF
@@ -65,13 +69,14 @@ resource "kubernetes_config_map" "vault" {
 
 # Render the Vault YAML file
 data "template_file" "vault" {
-  template = "${file("${path.module}/../k8s/vault.yaml")}"
+  template = "${file("${path.module}/../../k8s/vault.yaml")}"
 
   vars {
     load_balancer_ip  = "${data.google_compute_address.vault.address}"
     num_vault_servers = "${var.num_vault_servers}"
     project_id        = "${data.google_project.vault.project_id}"
     region            = "${var.region}"
+    vault_seal        = "${google_kms_crypto_key.vault-seal.name}"
   }
 }
 

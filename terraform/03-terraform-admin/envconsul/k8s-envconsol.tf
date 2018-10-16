@@ -48,11 +48,11 @@ resource "null_resource" "envconsul" {
 }
 
 data "template_file" "envconsul" {
-  template = "${file("${path.module}/../../k8s/envconsul.yaml")}"
+  template = "${file("${path.module}/../../../k8s/envconsul.yaml")}"
 
   vars {
     project_id          = "${data.google_project.vault.project_id}"
     vault_token         = "${var.vault_token}"
-    roleset_key_name    = "${var.rolset_key_name}"
+    roleset_key_name    = "${var.roleset_key_name}"
   }
 }

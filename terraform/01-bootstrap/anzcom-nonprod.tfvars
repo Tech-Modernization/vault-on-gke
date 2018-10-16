@@ -1,0 +1,5 @@
+#vault_license_path  = "????"
+#consul_license_path = "????"
+host_project_id     = "anz-cs-network-np-f85f58"
+shared_vpc_name     = "anz-cs-network-np-vpc"
+project_id          = "anz-cs-vault-np-5eb860"

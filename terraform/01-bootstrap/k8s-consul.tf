@@ -18,6 +18,10 @@ resource "null_resource" "push-consul-image-to-gcr" {
 
   provisioner "local-exec" {
     command = <<EOF
+# authenticate gcloud cli tools
+gcloud auth activate-service-account --key-file $GOOGLE_APPLICATION_CREDENTIALS
+
+# tag and push
 docker tag "consul-enterprise:1.2.3" "gcr.io/${data.google_project.vault.project_id}/consul-enterprise:1.2.3"
 docker push "gcr.io/${data.google_project.vault.project_id}/consul-enterprise:1.2.3"
 EOF
@@ -41,7 +45,7 @@ resource "kubernetes_secret" "consul-license" {
 
 # Render the Consul YAML file
 data "template_file" "consul" {
-  template = "${file("${path.module}/../k8s/consul.yaml")}"
+  template = "${file("${path.module}/../../k8s/consul.yaml")}"
 
   vars {
     project_id = "${data.google_project.vault.project_id}"
