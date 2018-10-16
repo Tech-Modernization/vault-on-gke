@@ -89,10 +89,14 @@ resource "null_resource" "apply-vault" {
     client_certificate     = "${md5(data.google_container_cluster.vault.master_auth.0.client_certificate)}"
     client_key             = "${md5(data.google_container_cluster.vault.master_auth.0.client_key)}"
     cluster_ca_certificate = "${md5(data.google_container_cluster.vault.master_auth.0.cluster_ca_certificate)}"
+    vault_template         = "${md5(data.template_file.vault.rendered)}"
   }
 
   provisioner "local-exec" {
     command = <<EOF
+# authenticate gcloud cli tools
+gcloud auth activate-service-account --key-file $GOOGLE_APPLICATION_CREDENTIALS
+
 gcloud container clusters get-credentials "${data.google_container_cluster.vault.name}" --zone="${data.google_container_cluster.vault.zone}" --project="${data.google_container_cluster.vault.project}"
 
 CONTEXT="gke_${data.google_container_cluster.vault.project}_${data.google_container_cluster.vault.zone}_${data.google_container_cluster.vault.name}"
