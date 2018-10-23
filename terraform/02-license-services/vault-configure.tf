@@ -47,12 +47,13 @@ resource "null_resource" "configure-services" {
 
   provisioner "local-exec" {
     # Credentials needs to be single line json with escaped quotes '\"' and double escaped '\\n' such that the payload looks
-    # like "{ \"type\": \"service_account\", \"project_id\": \"project-123456\", ...}"
+    # like "{ \"type\": \"service_account\", \"project_id\": \"project-123456\", \"private_key\": \"-----BEGIN PRIVATE KEY-----\\nMIIEvgIBA...\" }"
     # - Refer to: https://www.vaultproject.io/api/auth/gcp/index.html#sample-payload
     # - Remove carriage returns to payload on a single line
-    # - find replace '"' => '\n'
+    # - find replace '"' => '\"'
     # - find replace '\n' => '\\n'
-    # TODO Wish the API accepted base64 credentials value or find a `sed` guru to preprocess the credentials
+    # - cat credentials.json | sed ':a;N;$!ba;s/\n/ /g' | sed 's/"/\\"/g'| sed 's/\\n/\\\\n/g'
+    # TODO Wish the API accepted base64 credentials value
     command = "${local.curl} --data '{ \"ttl\": \"${var.service_account_key_ttl}\", \"max_ttl\": \"${var.service_account_key_max_ttl}\", \"credentials\": \"${chomp(file(var.org_admin_credentials))}\" }' https://127.0.0.1:8200/v1/gcp/config"
   }
 }
