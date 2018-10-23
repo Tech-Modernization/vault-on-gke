@@ -36,7 +36,7 @@ resource "google_kms_crypto_key_iam_member" "vault-seal" {
 }
 
 module "vault-cluster" {
-  source                  = "git::https://github.service.anz/ics/terraform-gcp-modules.git//resource-gke-regional-cluster?ref=bd5ca66"
+  source                  = "git::https://github.service.anz/ics/terraform-gcp-modules.git//resource-gke-regional-cluster?ref=1d7a368"
   region                  = "${var.region}"
   project_id              = "${data.google_project.vault.project_id}"
   host_project_id         = "${var.host_project_id}"
@@ -60,9 +60,16 @@ module "vault-cluster" {
   #  monitoring_service = "${var.kubernetes_monitoring_service}"
 
   master_authorized_cidr_blocks = [
-    { cidr_block = "1.136.0.0/16", display_name = "T4GXP_MFG7 4G" },
-    { cidr_block = "59.154.134.121/32", display_name = "Alteon App Internet Proxy" },
-#    { cidr_block = "0.0.0.0/0" } # Cloud build and local access
+    { cidr_block = "10.186.0.0/15"        display_name = "ANZ 833 workstations and WiFi" },
+    { cidr_block = "59.154.134.121/32",   display_name = "Alteon App Internet Proxy" },
+
+    { cidr_block = "1.136.0.0/16",        display_name = "T4GXP_MFG7 4G Range 1" },
+    { cidr_block = "1.152.0.0/16",        display_name = "T4GXP_MFG7 4G Range 2" },
+    { cidr_block = "203.110.0.0/16",      display_name = "T4GXP_MFG7 4G Range 3" },
+  ]
+
+  default_node_pool_tags = [
+    "${var.project_id}-pool"
   ]
 }
 
