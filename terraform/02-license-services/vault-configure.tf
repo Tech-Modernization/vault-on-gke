@@ -18,6 +18,10 @@ resource "null_resource" "enable-services" {
   }
 
   provisioner "local-exec" {
+    command = "${local.curl} --data '{ \"type\": \"userpass\" }' https://127.0.0.1:8200/v1/sys/auth/userpass"
+  }
+
+  provisioner "local-exec" {
     command = "${local.curl} --data '{ \"type\": \"gcp\" }' https://127.0.0.1:8200/v1/sys/mounts/gcp"
   }
 }
