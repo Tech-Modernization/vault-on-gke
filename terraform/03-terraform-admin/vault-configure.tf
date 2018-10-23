@@ -28,7 +28,17 @@ resource "null_resource" "configure-admin-roleset" {
   }
 
   provisioner "local-exec" {
+    command = "gcloud auth activate-service-account --key-file $GOOGLE_APPLICATION_CREDENTIALS"
+    when    = "destroy"
+  }
+
+  provisioner "local-exec" {
     command = "gcloud container clusters get-credentials ${data.google_container_cluster.vault.name} --zone ${data.google_container_cluster.vault.zone} --project ${data.google_container_cluster.vault.project}"
+  }
+
+  provisioner "local-exec" {
+    command = "gcloud container clusters get-credentials ${data.google_container_cluster.vault.name} --zone ${data.google_container_cluster.vault.zone} --project ${data.google_container_cluster.vault.project}"
+    when    = "destroy"
   }
 
   provisioner "local-exec" {
@@ -54,6 +64,17 @@ resource "null_resource" "configure-admin-keys-policy" {
     command = "gcloud auth activate-service-account --key-file $GOOGLE_APPLICATION_CREDENTIALS"
   }
 
+  # This is nasty, would probably be better to use vault provider to manage these
+  provisioner "local-exec" {
+    command = "gcloud auth activate-service-account --key-file $GOOGLE_APPLICATION_CREDENTIALS"
+    when    = "destroy"
+  }
+
+  provisioner "local-exec" {
+    command = "gcloud container clusters get-credentials ${data.google_container_cluster.vault.name} --zone ${data.google_container_cluster.vault.zone} --project ${data.google_container_cluster.vault.project}"
+    when    = "destroy"
+  }
+
   provisioner "local-exec" {
     command = "${local.curl} -X PUT --data '{ \"policy\": \"${base64encode(data.template_file.terraform-admin-keys-policy.rendered)}\" }' https://127.0.0.1:8200/v1/sys/policy/${local.policy_name}"
   }
@@ -71,6 +92,20 @@ resource "null_resource" "configure-deployment-user" {
 
   triggers {
     deployment_username     = "${var.deployment_username}"
+  }
+
+  provisioner "local-exec" {
+    command = "gcloud auth activate-service-account --key-file $GOOGLE_APPLICATION_CREDENTIALS"
+  }
+
+  provisioner "local-exec" {
+    command = "gcloud auth activate-service-account --key-file $GOOGLE_APPLICATION_CREDENTIALS"
+    when    = "destroy"
+  }
+
+  provisioner "local-exec" {
+    command = "gcloud container clusters get-credentials ${data.google_container_cluster.vault.name} --zone ${data.google_container_cluster.vault.zone} --project ${data.google_container_cluster.vault.project}"
+    when    = "destroy"
   }
 
   provisioner "local-exec" {

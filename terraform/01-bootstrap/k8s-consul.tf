@@ -63,6 +63,9 @@ resource "null_resource" "apply-consul" {
 
   provisioner "local-exec" {
     command = <<EOF
+# authenticate gcloud cli tools
+gcloud auth activate-service-account --key-file $GOOGLE_APPLICATION_CREDENTIALS
+
 gcloud container clusters get-credentials "${data.google_container_cluster.vault.name}" --zone="${data.google_container_cluster.vault.zone}" --project="${data.google_container_cluster.vault.project}"
 
 CONTEXT="gke_${data.google_container_cluster.vault.project}_${data.google_container_cluster.vault.zone}_${data.google_container_cluster.vault.name}"
@@ -103,6 +106,9 @@ EOF
 resource "null_resource" "consul-license" {
   provisioner "local-exec" {
     command = <<EOF
+# authenticate gcloud cli tools
+gcloud auth activate-service-account --key-file $GOOGLE_APPLICATION_CREDENTIALS
+
 gcloud container clusters get-credentials "${data.google_container_cluster.vault.name}" --zone="${data.google_container_cluster.vault.zone}" --project="${data.google_container_cluster.vault.project}"
 
 kubectl exec consul-cluster-0 -- sh -c 'consul license put @/consul/license/consul.license'
