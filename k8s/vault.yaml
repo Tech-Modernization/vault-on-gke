@@ -17,6 +17,26 @@ spec:
     protocol: TCP
 
 ---
+apiVersion: v1
+kind: Service
+metadata:
+  name: vault-cluster-internal
+  annotations:
+    cloud.google.com/load-balancer-type: "Internal"
+  labels:
+    app: vault-cluster
+spec:
+  type: LoadBalancer
+  loadBalancerIP: ${internal_load_balancer_ip}
+  selector:
+    app: vault
+  ports:
+  - name: vault-port
+    port: 443
+    targetPort: 8200
+    protocol: TCP
+
+---
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:

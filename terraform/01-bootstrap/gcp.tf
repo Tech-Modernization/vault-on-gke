@@ -7,6 +7,20 @@ data "google_compute_address" "vault" {
   project = "${data.google_project.vault.project_id}"
 }
 
+data "google_compute_subnetwork" "subnet" {
+  project = "${var.host_project_id}"
+  name    = "${data.google_project.vault.project_id}-subnet-gke" # By convention and a bit fragile, if subnet naming convention changes this needs to change
+}
+
+# Reserve an internal IP address
+resource "google_compute_address" "vault-internal" {
+  name            = "vault-lb-internal"
+  region          = "${var.region}"
+  address_type    = "INTERNAL"
+  project         = "${data.google_project.vault.project_id}"
+  subnetwork      = "${data.google_compute_subnetwork.subnet.self_link}"
+}
+
 # Create the KMS key ring
 resource "google_kms_key_ring" "vault-seal" {
   name     = "vault-keyring"

@@ -46,7 +46,7 @@ variable "vault_license_path" {
 }
 
 variable "external_address" {
-  description = "The pre created external IP address to bind the LB to"
+  description = "The pre created external address name to bind the LB to"
   type        = "string"
   default     = "vault-lb"
 }
